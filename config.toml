@@ -1,0 +1,2 @@
+[env]
+RUST_LOG = "renamer_gui=debug,renamer_cli=debug,renamer_lib=debug"
