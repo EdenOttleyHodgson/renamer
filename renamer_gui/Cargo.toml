@@ -4,9 +4,11 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-eframe = "0.31.1"
-egui = "0.31.1"
 env_logger = "0.11.8"
 log = "0.4.27"
 renamer_lib = { path = "../renamer_lib" }
 rfd = "0.15.3"
+slint = "1.12.1"
+uuid = { version = "1.17.0", features = ["v4"] }
+[build-dependencies]
+slint-build = "1.8.0"

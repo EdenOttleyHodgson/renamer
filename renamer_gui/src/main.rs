@@ -1,14 +1,21 @@
-mod gui;
 mod lib_thread;
-use std::error::Error;
+use std::fmt::Debug;
+use std::{error::Error, rc::Rc};
 
 use lib_thread::{FromLibReciever, ToLibSender};
-use renamer_lib::ActionGroup;
+use renamer_lib::{ActionGroup, ActionType};
+use slint::{ComponentHandle, ModelRc, VecModel};
 
 struct Renamer {
     sender: ToLibSender,
     reciever: FromLibReciever,
     action_groups: Vec<ActionGroup>,
+    next_action_group_id: usize,
+}
+impl Debug for Renamer {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "Action Groups: {:?}\n", self.action_groups)
+    }
 }
 
 impl Renamer {
@@ -17,26 +24,41 @@ impl Renamer {
             sender,
             reciever,
             action_groups: Vec::new(),
+            next_action_group_id: 0,
         }
     }
 }
+slint::include_modules!();
 
 fn main() -> Result<(), Box<dyn Error>> {
-    let options = eframe::NativeOptions {
-        viewport: egui::ViewportBuilder::default().with_inner_size([320.0, 240.0]),
-        ..Default::default()
-    };
-    env_logger::init();
+    env_logger::builder()
+        .filter(Some("renamer_gui"), log::LevelFilter::Trace)
+        .init();
+    log::debug!("Hello !");
 
     let (lib_handle, sender, reciever) = lib_thread::setup();
-    eframe::run_native(
-        "Renamer",
-        options,
-        Box::new(|cc| {
-            // This gives us image support:
-            Ok(Box::new(Renamer::new(sender, reciever)))
-        }),
-    )?;
+    let window = RenamerWindow::new()?;
+    window.set_action_groups(ModelRc::from([dummy_action_group()]));
+
+    window.run()?;
+
     let _ = lib_handle.join();
     Ok(())
+}
+
+fn dummy_action_group() -> S_ActionGroup {
+    S_ActionGroup {
+        id: 1,
+        files: Rc::new(VecModel::from(vec![S_File {
+            id: 1,
+            path: "hi".into(),
+        }]))
+        .into(),
+        actions: Rc::new(VecModel::from(vec![S_Action {
+            action_info: "Action Info".into(),
+            action_type: "Randomize".into(),
+            id: 1,
+        }]))
+        .into(),
+    }
 }

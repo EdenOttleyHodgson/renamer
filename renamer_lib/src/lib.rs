@@ -9,7 +9,9 @@ use rayon::iter::{IntoParallelIterator, ParallelIterator};
 use runner::RunnerConfig;
 pub use runner::run_actions;
 
+#[derive(Default, Debug)]
 pub struct ActionGroup {
+    id: usize,
     files: Vec<PathBuf>,
     actions: Vec<Action>,
 }
@@ -30,6 +32,13 @@ impl Into<Vec<FileAction>> for ActionGroup {
 }
 
 impl ActionGroup {
+    pub fn new(id: usize) -> Self {
+        Self {
+            id,
+            ..Default::default()
+        }
+    }
+
     pub fn run(self, num_threads: usize) -> Vec<Result<report::Report, error::ActionError>> {
         run_actions(self.into(), RunnerConfig::new(num_threads))
     }
@@ -43,7 +52,12 @@ impl ActionGroup {
     pub fn actions(&mut self) -> &mut Vec<Action> {
         &mut self.actions
     }
+
+    pub fn id(&self) -> usize {
+        self.id
+    }
 }
+#[derive(Debug, Clone)]
 pub enum Action {
     Randomize,
     Rename(RenamingPattern),
@@ -58,5 +72,19 @@ impl Action {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
+pub enum ActionType {
+    Randomize,
+    Rename,
+}
+impl From<Action> for ActionType {
+    fn from(value: Action) -> Self {
+        match value {
+            Action::Randomize => Self::Randomize,
+            Action::Rename(renaming_pattern) => Self::Rename,
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
 pub struct RenamingPattern;
