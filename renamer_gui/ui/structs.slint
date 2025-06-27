@@ -1,0 +1,22 @@
+
+
+
+
+
+export struct S_Action {
+  id: int,
+  action_type: string,
+  action_info: string, 
+}
+export struct S_File {
+  id: int,
+  path: string
+}
+
+export struct S_ActionGroup {
+  id: int,
+  actions: [S_Action],
+  files: [S_File]
+}
+
+

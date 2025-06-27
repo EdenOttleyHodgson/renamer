@@ -1,0 +1,99 @@
+import {S_ActionGroup, S_File, S_Action} from "./structs.slint";
+import {Button} from "std-widgets.slint";
+component FileComponent {
+  in property <S_File> file;
+  callback on_remove_file(int);
+  padding: 5px;
+  HorizontalLayout {
+    padding: 5px;
+    Text {
+      text: file.path;
+      vertical-alignment:center;
+      horizontal-alignment: center;
+    }
+    Button {
+      text: "Remove";
+      clicked => {root.on_remove_file(file.id)}
+    }
+  }
+
+}
+component ActionComponent {
+  in property <S_Action> action;
+  padding: 5px;
+  callback on_remove_action(int);
+  HorizontalLayout {
+    padding: 5px;
+    VerticalLayout {
+      Text {
+        text: action.action-type;
+        vertical-alignment:center;
+        horizontal-alignment: center;
+      }
+      Text {
+        text: action.action-info;
+        vertical-alignment:center;
+        horizontal-alignment: center;
+      }
+    }
+    Button {
+        clicked => {
+          root.on_remove_action(action.id)
+        }
+        text: "Remove";
+    }
+    }
+}
+export component ActionGroupComponent inherits VerticalLayout {
+  in property <S_ActionGroup> action_group;
+  callback on_remove_action(int, int);
+  callback on_add_action(int);
+  callback on_add_file(int);
+  callback on_remove_file(int, int);
+  HorizontalLayout {
+    padding: 5px;
+    VerticalLayout {
+      padding: 5px;
+      width: 50%;
+      Text {
+        text: "Files";
+        horizontal-alignment: center;
+        font-size: 18pt;
+      }
+      for file[i] in action_group.files: FileComponent {
+        file: file;
+        on_remove_file(file_id) => {
+            root.on_remove_file(action_group.id, file_id)
+        }
+
+        
+      }
+      Button {
+        text: "Add";
+        clicked => {
+          root.on_add_action(action_group.id)
+        }
+      }
+    }
+    VerticalLayout {
+      padding: 5px;
+      width: 50%;
+      Text {
+        text: "Actions";
+        horizontal-alignment: center;
+        font-size: 18pt;
+      }
+      for action[i] in action_group.actions: ActionComponent {
+        action: action;
+      }
+      Button {
+        text: "Add";
+        clicked => {
+          root.on_add_file(action_group.id)
+        }
+      }
+    }
+  }
+}
+
+

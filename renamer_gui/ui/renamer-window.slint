@@ -1,0 +1,39 @@
+import {S_ActionGroup} from "./structs.slint";
+import {ActionGroupComponent} from "./action-group.slint";
+import {Button} from "std-widgets.slint";
+export component RenamerWindow inherits Window{
+  
+  preferred-width: 500px;
+  preferred-height: 500px;
+  callback add_file(int);
+  callback remove_file(int, int);
+  callback add_action(int);
+  callback remove_action(int, int);
+  callback add_action_group;
+  in property<[S_ActionGroup]> action-groups;
+  Text {
+    font-size: 20pt;
+    horizontal-alignment: center;
+    y: 0;
+    text: "Renamer";
+  }
+  VerticalLayout {  
+    y: parent.height / 10;
+    for group[i] in action-groups: ActionGroupComponent {
+      padding: 5px;
+      width: 50%;
+      max-height: parent.height / 5;
+      preferred-height: parent.height / 5;
+      action_group: group;
+      on_add_file(group_id) => {root.add_file(group_id)}
+      on_remove_file(group_id, action_id) => {root.remove_file(group_id, action_id)}
+      on_add_action(group_id) => {root.add_action(group_id)}
+      on_remove_action(group_id, action_id) => {root.remove_action(group_id, action_id)}
+
+    }
+    Button {
+      max-height: parent.height / 10;
+      text: "Add Action Group";
+    }
+  }
+}
