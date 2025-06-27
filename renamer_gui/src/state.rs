@@ -11,8 +11,8 @@ use std::{
 use crate::lib_thread::{self, FromLibReciever, ToLibSender};
 use renamer_lib::{ActionGroup, ActionType};
 
-type RenamerState = Arc<RwLock<Renamer>>;
-type WeakRenamerState = Weak<RwLock<Renamer>>;
+pub type RenamerState = Arc<RwLock<Renamer>>;
+pub type WeakRenamerState = Weak<RwLock<Renamer>>;
 
 pub fn init_state() -> (RenamerState, JoinHandle<()>) {
     let (lib_handle, sender, reciever) = lib_thread::setup();

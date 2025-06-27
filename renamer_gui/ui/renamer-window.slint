@@ -10,6 +10,8 @@ export component RenamerWindow inherits Window{
   callback add_action(int);
   callback remove_action(int, int);
   callback add_action_group;
+  callback remove_action_group(int);
+  callback refresh_state;
   in property<[S_ActionGroup]> action-groups;
   Text {
     font-size: 20pt;

@@ -64,9 +64,7 @@ export component ActionGroupComponent inherits VerticalLayout {
         file: file;
         on_remove_file(file_id) => {
             root.on_remove_file(action_group.id, file_id)
-        }
-
-        
+        } 
       }
       Button {
         text: "Add";
@@ -85,6 +83,9 @@ export component ActionGroupComponent inherits VerticalLayout {
       }
       for action[i] in action_group.actions: ActionComponent {
         action: action;
+        on_remove_action(action_id) => {
+          root.on_remove_action(action_group.id, action-id)
+        }
       }
       Button {
         text: "Add";
