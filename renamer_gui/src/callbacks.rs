@@ -10,7 +10,12 @@ fn add_action(group_id: i32, state: RenamerState) {}
 fn remove_action(group_id: i32, action_id: i32, state: RenamerState) {}
 fn add_action_group(state: RenamerState) {}
 fn remove_action_group(group_id: i32, state: RenamerState) {}
-fn refresh_state(window: Weak<RenamerWindow>, state: RenamerState) {}
+fn refresh_state(window: Weak<RenamerWindow>, state: RenamerState) {
+    let new_ui_state = state.read().compute_ui_data();
+    if let Some(w) = window.upgrade() {
+        w.set_action_groups(new_ui_state);
+    }
+}
 
 pub fn set_callbacks(window: &RenamerWindow, state: RenamerState) {
     let s = state.clone();

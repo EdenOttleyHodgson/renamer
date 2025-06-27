@@ -2,7 +2,7 @@ pub mod error;
 mod file_actions;
 pub mod report;
 mod runner;
-use std::path::PathBuf;
+use std::{collections::HashMap, path::PathBuf};
 
 use file_actions::{FileAction, FileActionType};
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
@@ -12,18 +12,20 @@ pub use runner::run_actions;
 #[derive(Default, Debug)]
 pub struct ActionGroup {
     id: usize,
-    files: Vec<PathBuf>,
-    actions: Vec<Action>,
+    files: HashMap<i32, PathBuf>,
+    next_file_id: i32,
+    actions: HashMap<i32, Action>,
+    next_action_id: i32,
 }
 
 impl Into<Vec<FileAction>> for ActionGroup {
     fn into(self) -> Vec<FileAction> {
         self.files
             .into_iter()
-            .map(|p| {
+            .map(|(_, p)| {
                 self.actions
                     .iter()
-                    .map(|act| act.make_file_action(p.clone()))
+                    .map(|(_, act)| act.make_file_action(p.clone()))
                     .collect::<Vec<_>>()
             })
             .flatten()
@@ -42,19 +44,28 @@ impl ActionGroup {
     pub fn run(self, num_threads: usize) -> Vec<Result<report::Report, error::ActionError>> {
         run_actions(self.into(), RunnerConfig::new(num_threads))
     }
-    pub fn files(&mut self) -> &mut Vec<PathBuf> {
+    pub fn files_mut(&mut self) -> &mut HashMap<i32, PathBuf> {
         &mut self.files
     }
     pub fn add_file(&mut self, file: PathBuf) {
-        self.files.push(file);
+        self.files.insert(self.next_file_id, file);
+        self.next_file_id += 1;
     }
 
-    pub fn actions(&mut self) -> &mut Vec<Action> {
+    pub fn actions_mut(&mut self) -> &mut HashMap<i32, Action> {
         &mut self.actions
     }
 
     pub fn id(&self) -> usize {
         self.id
+    }
+
+    pub fn files(&self) -> &HashMap<i32, PathBuf> {
+        &self.files
+    }
+
+    pub fn actions(&self) -> &HashMap<i32, Action> {
+        &self.actions
     }
 }
 #[derive(Debug, Clone)]
@@ -62,6 +73,7 @@ pub enum Action {
     Randomize,
     Rename(RenamingPattern),
 }
+
 impl Action {
     fn make_file_action(&self, file: PathBuf) -> FileAction {
         let action_type = match self {
@@ -70,9 +82,15 @@ impl Action {
         };
         FileAction::new(action_type, file)
     }
+    pub fn get_type(&self) -> ActionType {
+        match self {
+            Action::Randomize => ActionType::Randomize,
+            Action::Rename(_) => ActionType::Rename,
+        }
+    }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub enum ActionType {
     Randomize,
     Rename,
@@ -83,6 +101,11 @@ impl From<Action> for ActionType {
             Action::Randomize => Self::Randomize,
             Action::Rename(renaming_pattern) => Self::Rename,
         }
+    }
+}
+impl std::fmt::Display for ActionType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{self:?}")
     }
 }
 
