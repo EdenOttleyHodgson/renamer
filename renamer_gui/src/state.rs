@@ -12,7 +12,7 @@ use std::{
 
 use crate::lib_thread::{self, FromLibReciever, ToLibSender};
 use crate::slint_generatedRenamerWindow::{S_Action, S_ActionGroup, S_File};
-use renamer_lib::{ActionGroup, ActionType};
+use renamer_lib::{Action, ActionGroup, ActionType, RenamingPattern};
 
 // slint::include_modules!();
 
@@ -25,10 +25,18 @@ pub fn init_state() -> (RenamerState, JoinHandle<()>) {
     (Arc::new(RwLock::new(renamer)), lib_handle)
 }
 
+pub fn init_state_debug() -> (RenamerState, JoinHandle<()>) {
+    let (lib_handle, sender, reciever) = lib_thread::setup();
+    let mut renamer = Renamer::new(sender, reciever);
+    renamer.new_action_group();
+    renamer.add_actions_to_group(0, vec![Action::Randomize]);
+    (Arc::new(RwLock::new(renamer)), lib_handle)
+}
 pub struct Renamer {
     sender: ToLibSender,
     reciever: FromLibReciever,
     action_groups: HashMap<i32, ActionGroup>,
+    next_action_group_id: i32,
 }
 impl Debug for Renamer {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -42,6 +50,7 @@ impl Renamer {
             sender,
             reciever,
             action_groups: HashMap::new(),
+            next_action_group_id: 0,
         }
     }
     pub fn compute_ui_data(&self) -> ModelRc<S_ActionGroup> {
@@ -52,6 +61,66 @@ impl Renamer {
             .as_slice()
             .into()
     }
+    pub fn new_action_group(&mut self) {
+        self.action_groups.insert(
+            self.next_action_group_id,
+            ActionGroup::new(self.next_action_group_id),
+        );
+        self.next_action_group_id += 1;
+    }
+    pub fn delete_action_group(&mut self, group_id: i32) {
+        self.action_groups.remove(&group_id);
+    }
+    pub fn add_files_to_group(&mut self, id: i32, files: Vec<PathBuf>) {
+        if let Some(group) = self.action_groups.get_mut(&id) {
+            for file in files {
+                group.add_file(file);
+            }
+        } else {
+            log::error!("Non existent action group id!: {} for state {:?}", id, self)
+        }
+    }
+    pub fn add_actions_to_group(&mut self, id: i32, actions: Vec<Action>) {
+        if let Some(group) = self.action_groups.get_mut(&id) {
+            for action in actions {
+                group.add_action(action);
+            }
+        } else {
+            log::error!("Non existent action group id!: {} for state {:?}", id, self)
+        }
+    }
+    pub fn add_action_to_group(&mut self, id: i32, action: Action) {
+        if let Some(group) = self.action_groups.get_mut(&id) {
+            group.add_action(action);
+        } else {
+            log::error!("Non existent action group id!: {} for state {:?}", id, self)
+        }
+    }
+    pub fn remove_file_from_group(&mut self, group_id: i32, file_id: i32) {
+        if let Some(group) = self.action_groups.get_mut(&group_id) {
+            group.files_mut().remove(&file_id);
+        }
+    }
+    pub fn remove_action_from_group(&mut self, group_id: i32, action_id: i32) {
+        if let Some(group) = self.action_groups.get_mut(&group_id) {
+            group.actions_mut().remove(&action_id);
+        }
+    }
+}
+
+impl TryFrom<S_Action> for renamer_lib::Action {
+    fn try_from(value: S_Action) -> Result<Self, String> {
+        match value.action_type.as_str() {
+            "Randomize" => Ok(Action::Randomize),
+            "Rename" => Ok(Action::Rename(RenamingPattern)),
+            _ => {
+                log::error!("Bad S_Action type!");
+                Err("Bad S_Action Type!".to_owned())
+            }
+        }
+    }
+
+    type Error = String;
 }
 
 impl Into<S_Action> for (&i32, &renamer_lib::Action) {

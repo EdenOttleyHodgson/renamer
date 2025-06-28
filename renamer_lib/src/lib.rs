@@ -11,7 +11,7 @@ pub use runner::run_actions;
 
 #[derive(Default, Debug)]
 pub struct ActionGroup {
-    id: usize,
+    id: i32,
     files: HashMap<i32, PathBuf>,
     next_file_id: i32,
     actions: HashMap<i32, Action>,
@@ -34,7 +34,7 @@ impl Into<Vec<FileAction>> for ActionGroup {
 }
 
 impl ActionGroup {
-    pub fn new(id: usize) -> Self {
+    pub fn new(id: i32) -> Self {
         Self {
             id,
             ..Default::default()
@@ -51,12 +51,16 @@ impl ActionGroup {
         self.files.insert(self.next_file_id, file);
         self.next_file_id += 1;
     }
+    pub fn add_action(&mut self, action: Action) {
+        self.actions.insert(self.next_action_id, action);
+        self.next_action_id += 1;
+    }
 
     pub fn actions_mut(&mut self) -> &mut HashMap<i32, Action> {
         &mut self.actions
     }
 
-    pub fn id(&self) -> usize {
+    pub fn id(&self) -> i32 {
         self.id
     }
 

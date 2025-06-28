@@ -1,18 +1,30 @@
-import {S_ActionGroup} from "./structs.slint";
+import {S_ActionGroup, S_Action} from "./structs.slint";
 import {ActionGroupComponent} from "./action-group.slint";
 import {Button} from "std-widgets.slint";
+import {ActionInputPopup} from "./action-input-popup.slint";
 export component RenamerWindow inherits Window{
   
   preferred-width: 500px;
   preferred-height: 500px;
   callback add_file(int);
   callback remove_file(int, int);
-  callback add_action(int);
+  callback add_action(int, S_Action);
   callback remove_action(int, int);
   callback add_action_group;
   callback remove_action_group(int);
   callback refresh_state;
   in property<[S_ActionGroup]> action-groups;
+  property<int> popup_group_id;
+  action_input_popup:= ActionInputPopup {
+      width: 100px;
+      height: 100px;
+      on_confirm(s_action) => {
+        root.add_action(popup_group_id, s_action);
+        self.close();
+      root.refresh_state();
+      }
+    }
+
   Text {
     font-size: 20pt;
     horizontal-alignment: center;
@@ -27,15 +39,40 @@ export component RenamerWindow inherits Window{
       max-height: parent.height / 5;
       preferred-height: parent.height / 5;
       action_group: group;
-      on_add_file(group_id) => {root.add_file(group_id)}
-      on_remove_file(group_id, action_id) => {root.remove_file(group_id, action_id)}
-      on_add_action(group_id) => {root.add_action(group_id)}
-      on_remove_action(group_id, action_id) => {root.remove_action(group_id, action_id)}
-
+      on_add_file(group_id) => {
+        root.add_file(group_id); 
+        root.refresh_state()
+      }
+      on_remove_file(group_id, action_id) => {
+        root.remove_file(group_id, action_id);
+        root.refresh_state();
+      }
+      on_add_action(group_id) => {
+        popup_group_id = group_id;
+        action_input_popup.show()
+        
+      }
+      on_remove_action(group_id, action_id) => {
+        root.remove_action(group_id, action_id);
+        root.refresh_state();
+      }
+      Button {
+      text: "Remove Action Group";
+      clicked => {
+        root.remove_action_group(group.id);
+        root.refresh_state();
+      }
     }
+    }
+
     Button {
       max-height: parent.height / 10;
       text: "Add Action Group";
+      clicked => {
+        root.add_action_group();
+        root.refresh_state();
+
+      }
     }
   }
 }

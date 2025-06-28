@@ -14,11 +14,11 @@ fn main() -> Result<(), Box<dyn Error>> {
         .filter(Some("renamer_gui"), log::LevelFilter::Trace)
         .init();
     log::debug!("Hello !");
-    let (state, lib_handle) = state::init_state();
+    let (state, lib_handle) = state::init_state_debug();
 
     let window = RenamerWindow::new()?;
     set_callbacks(&window, state.clone());
-    window.set_action_groups(ModelRc::from([dummy_action_group()]));
+    window.invoke_refresh_state();
     window.run()?;
     let _ = lib_handle.join();
     Ok(())

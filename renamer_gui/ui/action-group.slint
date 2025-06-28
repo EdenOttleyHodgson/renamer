@@ -69,7 +69,7 @@ export component ActionGroupComponent inherits VerticalLayout {
       Button {
         text: "Add";
         clicked => {
-          root.on_add_action(action_group.id)
+          root.on_add_file(action_group.id)
         }
       }
     }
@@ -90,7 +90,7 @@ export component ActionGroupComponent inherits VerticalLayout {
       Button {
         text: "Add";
         clicked => {
-          root.on_add_file(action_group.id)
+          root.on_add_action(action_group.id)
         }
       }
     }
