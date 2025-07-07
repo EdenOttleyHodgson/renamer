@@ -3,6 +3,7 @@ use std::{
     thread::{self, JoinHandle},
 };
 
+use crate::{slint_generatedRenamerWindow::RenamerWindow, state::RenamerState};
 use log::trace;
 use renamer_lib::{ActionGroup, error::ActionError, report::Report};
 
@@ -84,4 +85,16 @@ pub fn setup() -> (JoinHandle<()>, ToLibSender, FromLibReciever) {
     let (gui_tx, lib_rx) = mpsc::channel::<ToLibMessage>();
     let wrapper = LibWrapper::new(lib_tx, lib_rx);
     (thread::spawn(move || wrapper.event_loop()), gui_tx, gui_rx)
+}
+
+pub fn handle_gui_messages(gui_rx: FromLibReciever, state: RenamerState) {
+    loop {
+        match gui_rx.recv() {
+            Ok(msg) => state.write().handle_message(msg),
+            Err(e) => {
+                log::error!("{e}");
+                break;
+            }
+        }
+    }
 }

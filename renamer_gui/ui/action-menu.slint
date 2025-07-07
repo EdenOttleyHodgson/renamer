@@ -1,0 +1,53 @@
+import {S_Action} from "./structs.slint";
+import {ComboBox, Button} from "std-widgets.slint";
+export component ActionMenu inherits Rectangle{
+  callback on_confirm( S_Action);
+  callback on_cancel;
+  property <S_Action> action: {action_type: "", action_info: ""};
+  public function to_s_action() -> S_Action {
+    action.action_type = selector.current-value;
+    action.action_info = input.text;
+    return action;
+  } 
+  states [
+      active when selector.current-value == "Rename": {
+        input-rect.visible: true;
+      }
+      active when selector.current-value != "Rename": {
+        input-rect.visible: false;
+      }
+  ]
+  VerticalLayout {
+    padding: 10px;
+    selector := ComboBox {
+      max-height: parent.height *0.1;
+      model: ["Randomize", "Rename"]; 
+      padding: 5px;
+    }
+    input-rect:= Rectangle {
+      max-height: parent.height *0.1;
+      border-color: black;
+      background: black; 
+      padding: 5px;
+      input := TextInput { 
+      }
+    }
+    HorizontalLayout {
+      max-height: parent.height * 0.1;
+      max-width: parent.width;
+      padding: 5px;
+      Button { 
+        max-width: parent.width;
+        padding: 5px;
+        text: "Confirm";
+        clicked => {root.on_confirm( to_s_action())} 
+      }
+      Button {
+        max-width: parent.width;
+        padding: 5px;
+        text: "Cancel";
+        clicked => {root.on_cancel()}
+      }
+    }
+  }
+}

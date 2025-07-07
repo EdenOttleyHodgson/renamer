@@ -1,5 +1,5 @@
 import {S_ActionGroup, S_File, S_Action} from "./structs.slint";
-import {Button} from "std-widgets.slint";
+import {Button, ListView} from "std-widgets.slint";
 component FileComponent {
   in property <S_File> file;
   callback on_remove_file(int);
@@ -46,26 +46,34 @@ component ActionComponent {
 }
 export component ActionGroupComponent inherits VerticalLayout {
   in property <S_ActionGroup> action_group;
+  out property <length> file-column-location <=> file-layout.x;
+  out property <length> action-column-location <=> action-layout.x;
+  in property <bool> display_title;
   callback on_remove_action(int, int);
   callback on_add_action(int);
   callback on_add_file(int);
   callback on_remove_file(int, int);
+  callback on_remove_self();
+  
   HorizontalLayout {
     padding: 5px;
-    VerticalLayout {
+    file-layout := VerticalLayout {
       padding: 5px;
       width: 50%;
+      if display_title:
       Text {
         text: "Files";
         horizontal-alignment: center;
         font-size: 18pt;
       }
-      for file[i] in action_group.files: FileComponent {
-        file: file;
-        on_remove_file(file_id) => {
-            root.on_remove_file(action_group.id, file_id)
-        } 
-      }
+        ListView {
+          for file[i] in action_group.files: FileComponent {
+            file: file;
+            on_remove_file(file_id) => {
+              root.on_remove_file(action_group.id, file_id)
+            } 
+          }
+        }
       Button {
         text: "Add";
         clicked => {
@@ -73,18 +81,21 @@ export component ActionGroupComponent inherits VerticalLayout {
         }
       }
     }
-    VerticalLayout {
+    action-layout:= VerticalLayout {
       padding: 5px;
       width: 50%;
+      if display_title:
       Text {
         text: "Actions";
         horizontal-alignment: center;
         font-size: 18pt;
       }
-      for action[i] in action_group.actions: ActionComponent {
-        action: action;
-        on_remove_action(action_id) => {
-          root.on_remove_action(action_group.id, action-id)
+      ListView {
+        for action[i] in action_group.actions: ActionComponent {
+          action: action;
+          on_remove_action(action_id) => {
+            root.on_remove_action(action_group.id, action-id)
+          }
         }
       }
       Button {
@@ -94,6 +105,19 @@ export component ActionGroupComponent inherits VerticalLayout {
         }
       }
     }
+    
+  }
+  Button {
+      text: "Remove Action Group"; 
+      clicked => {
+        root.on_remove_self()
+      }
+  }
+  Rectangle {
+    height: 1px;
+    width: parent.width;
+    border-color: black;
+    border-width: 2px;
   }
 }
 

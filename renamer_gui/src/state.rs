@@ -1,42 +1,47 @@
 use parking_lot::RwLock;
-use slint::ModelRc;
+use slint::{ModelRc, Weak};
 use std::{
     cell::OnceCell,
     collections::HashMap,
     fmt::Debug,
     path::PathBuf,
-    rc::Weak,
     sync::{Arc, LazyLock, Mutex},
+    thread,
     thread::JoinHandle,
 };
 
-use crate::lib_thread::{self, FromLibReciever, ToLibSender};
-use crate::slint_generatedRenamerWindow::{S_Action, S_ActionGroup, S_File};
+use crate::lib_thread::{self, FromLibMessage, FromLibReciever, ToLibSender};
+use crate::slint_generatedRenamerWindow::{RenamerWindow, S_Action, S_ActionGroup, S_File};
 use renamer_lib::{Action, ActionGroup, ActionType, RenamingPattern};
 
 // slint::include_modules!();
 
 pub type RenamerState = Arc<RwLock<Renamer>>;
-pub type WeakRenamerState = Weak<RwLock<Renamer>>;
+// pub type WeakRenamerState = Weak<RwLock<Renamer>>;
 
-pub fn init_state() -> (RenamerState, JoinHandle<()>) {
+pub fn init_state(window: Weak<RenamerWindow>) -> (RenamerState, JoinHandle<()>) {
     let (lib_handle, sender, reciever) = lib_thread::setup();
-    let renamer = Renamer::new(sender, reciever);
+    let renamer = Renamer::new(sender, window);
     (Arc::new(RwLock::new(renamer)), lib_handle)
 }
 
-pub fn init_state_debug() -> (RenamerState, JoinHandle<()>) {
+pub fn init_state_debug(window: Weak<RenamerWindow>) -> (RenamerState, JoinHandle<()>) {
     let (lib_handle, sender, reciever) = lib_thread::setup();
-    let mut renamer = Renamer::new(sender, reciever);
+    let mut renamer = Renamer::new(sender, window);
     renamer.new_action_group();
     renamer.add_actions_to_group(0, vec![Action::Randomize]);
-    (Arc::new(RwLock::new(renamer)), lib_handle)
+    let renamer_state = Arc::new(RwLock::new(renamer));
+    let s = renamer_state.clone();
+    let reciever_handle = thread::spawn(move || lib_thread::handle_gui_messages(reciever, s));
+    renamer_state.write().set_reciever_handle(reciever_handle);
+    (renamer_state, lib_handle)
 }
 pub struct Renamer {
     sender: ToLibSender,
-    reciever: FromLibReciever,
+    reciever_handle: Option<JoinHandle<()>>,
     action_groups: HashMap<i32, ActionGroup>,
     next_action_group_id: i32,
+    window: Weak<RenamerWindow>,
 }
 impl Debug for Renamer {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -45,13 +50,17 @@ impl Debug for Renamer {
 }
 
 impl Renamer {
-    fn new(sender: ToLibSender, reciever: FromLibReciever) -> Self {
+    fn new(sender: ToLibSender, window: Weak<RenamerWindow>) -> Self {
         Self {
             sender,
-            reciever,
+            reciever_handle: None,
             action_groups: HashMap::new(),
             next_action_group_id: 0,
+            window,
         }
+    }
+    fn set_reciever_handle(&mut self, handle: JoinHandle<()>) {
+        self.reciever_handle = Some(handle);
     }
     pub fn compute_ui_data(&self) -> ModelRc<S_ActionGroup> {
         self.action_groups
@@ -104,6 +113,18 @@ impl Renamer {
     pub fn remove_action_from_group(&mut self, group_id: i32, action_id: i32) {
         if let Some(group) = self.action_groups.get_mut(&group_id) {
             group.actions_mut().remove(&action_id);
+        }
+    }
+    pub fn send_message(&mut self) {}
+    pub fn handle_message(&mut self, msg: FromLibMessage) {
+        if let Some(window) = self.window.upgrade() {
+            match msg {
+                FromLibMessage::SuccessfulActions(vec) => {}
+                FromLibMessage::UnsuccessfulActions(vec) => todo!(),
+            };
+            window.invoke_refresh_state();
+        } else {
+            log::error!("Message recieved while window is gone!");
         }
     }
 }

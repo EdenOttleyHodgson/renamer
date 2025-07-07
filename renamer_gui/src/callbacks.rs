@@ -1,6 +1,7 @@
 use slint::{ComponentHandle, Weak};
 
-use crate::state::{RenamerState, WeakRenamerState};
+use crate::lib_thread::FromLibMessage;
+use crate::state::RenamerState;
 
 use crate::slint_generatedRenamerWindow::{RenamerWindow, S_Action};
 
