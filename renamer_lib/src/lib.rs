@@ -1,5 +1,6 @@
 pub mod error;
 mod file_actions;
+mod patterns;
 pub mod report;
 mod runner;
 use std::{collections::HashMap, path::PathBuf};
