@@ -1,6 +1,6 @@
 use slint::{ComponentHandle, Weak};
 
-use crate::lib_thread::FromLibMessage;
+use crate::lib_thread::{FromLibMessage, ToLibMessage};
 use crate::state::RenamerState;
 
 use crate::slint_generatedRenamerWindow::{RenamerWindow, S_Action};
@@ -42,6 +42,11 @@ fn refresh_state(window: Weak<RenamerWindow>, state: RenamerState) {
     }
 }
 
+fn go_pressed(state: RenamerState) {
+    log::trace!("Go Pressed callback triggered");
+    state.write().execute_actions();
+}
+
 pub fn set_callbacks(window: &RenamerWindow, state: RenamerState) {
     let s = state.clone();
     window.on_add_file(move |group_id| add_file(group_id, s.clone()));
@@ -56,6 +61,8 @@ pub fn set_callbacks(window: &RenamerWindow, state: RenamerState) {
     window.on_add_action_group(move || add_action_group(s.clone()));
     let s = state.clone();
     window.on_remove_action_group(move |group_id| remove_action_group(group_id, s.clone()));
+    let s = state.clone();
+    window.on_on_go_pressed(move || go_pressed(s.clone()));
     let weak_window = window.as_weak();
     window.on_refresh_state(move || refresh_state(weak_window.clone(), state.clone()));
 }

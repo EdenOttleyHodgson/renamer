@@ -7,9 +7,11 @@ use crate::{slint_generatedRenamerWindow::RenamerWindow, state::RenamerState};
 use log::trace;
 use renamer_lib::{ActionGroup, error::ActionError, report::Report};
 
+#[derive(Debug)]
 pub enum ToLibMessage {
     ExecuteActions(Vec<ActionGroup>),
 }
+#[derive(Debug)]
 pub enum FromLibMessage {
     SuccessfulActions(Vec<Report>),
     UnsuccessfulActions(Vec<ActionError>),

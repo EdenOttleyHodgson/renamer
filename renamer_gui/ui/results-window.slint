@@ -1,0 +1,52 @@
+import {ListView, Button} from "std-widgets.slint";
+export component ResultsWindow inherits Rectangle {
+  in property <[string]> successes;
+  in property <[string]> failures;
+  callback on_ok_clicked;
+  VerticalLayout {
+    HorizontalLayout {
+      VerticalLayout {
+        Text {
+          horizontal-alignment: center;
+          font-size: 18pt;
+          text: "Successes";
+        }
+        Rectangle {
+          width: 50%;
+          ListView {
+            width: 100%;
+            height: 100%; 
+            for success in successes: Text { 
+                wrap: word-wrap;
+                text: success;
+            }
+          }
+        }
+      }
+      VerticalLayout {
+        Text {
+          horizontal-alignment: center;
+          font-size: 18pt;
+          text: "Failures";
+        }
+        Rectangle {
+          width: 50%;
+          ListView {
+            width: 100%;
+            height: 100%; 
+            for failure in failures: Text { 
+                wrap: word-wrap;
+                text: failure;
+            }
+          }
+        }
+      }
+    }
+    Button {
+      text: "Ok";
+      clicked => {on_ok_clicked()}
+    }
+  }
+  
+  
+}

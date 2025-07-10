@@ -2,6 +2,12 @@ import {S_ActionGroup, S_Action} from "./structs.slint";
 import {ActionGroupComponent} from "./action-group.slint";
 import {Button, ScrollView, ListView} from "std-widgets.slint";
 import {ActionMenu} from "./action-menu.slint";
+import {ResultsWindow} from "./results-window.slint";
+enum StateFlag {
+  input,
+  waiting,
+  finished
+}
 export component RenamerWindow inherits Window{
   
   preferred-width: 500px;
@@ -17,7 +23,9 @@ export component RenamerWindow inherits Window{
   callback handle_message;
   callback refresh_state;
   in property<[S_ActionGroup]> action-groups;
-  in property<bool> waiting;
+  in property<[string]> successes;
+  in property<[string]> failures;
+  in-out property<StateFlag> state_flag: StateFlag.input;
   property <bool> action-menu-active;
   property<int> add_action_group_id;
   /*
@@ -59,7 +67,7 @@ export component RenamerWindow inherits Window{
         display_title: i == 0 ? true : false;
         padding: 5px;
         width: 100%;
-        height: parent.height / 5;
+        height: parent.height / 3;
         //preferred-height: parent.height / 5;
         action_group: group;
         on_add_file(group_id) => {
@@ -79,7 +87,8 @@ export component RenamerWindow inherits Window{
           root.refresh_state();
         }
         on_remove_self() => {
-          root.remove_action_group(group.id)
+          root.remove_action_group(group.id);
+          root.refresh_state()
         
         }
       }
@@ -109,7 +118,7 @@ export component RenamerWindow inherits Window{
       width: 100%;
       height: 100%;
       on_confirm(s_action) => {
-        root.add_action(popup_group_id, s_action);
+        root.add_action(add_action_group_id, s_action);
         root.action-menu-active = false;
         root.refresh_state();
       }
@@ -118,22 +127,46 @@ export component RenamerWindow inherits Window{
       }
     }
   }
+  results-window := ResultsWindow {
+    visible: state_flag == StateFlag.finished ? true : false;
+    width: 25%;
+    x: 0.7 * parent.width;
+    y: parent.height / 10;
+    padding: 10px; 
+    height: 0.8 * parent.height;
+    border-color: black;
+    border-width: 3px;
+    on_ok_clicked => {root.state_flag = StateFlag.input}
+    successes: successes;
+    failures: failures;
+  }
   states  [
-    active when action-menu-active: {
+    active when action-menu-active && state_flag != StateFlag.finished: {
       action-menu.visible: true;
       action-group-layout.width: 0.7 * root.width;
+    }
+    active when state_flag == StateFlag.finished: {
+      action-group-layout.width: 0.7 * root.width;
+      action-menu.visible: false;
+      results-window.visible: true; 
     }
     active when !action-menu-active: {
       action-menu.visible: false; 
       action-group-layout.width: root.width;
     }
+    
   ]
 
-  Button {
-      y: 0.8 * parent.height;
-      text: "Go";
+  go_button:= Button {
+      y: action-group-layout.y + action-group-layout.height + 20px;
+      enabled: state_flag == StateFlag.waiting ? false : true;
+      text: state_flag == StateFlag.waiting ? "Processing" : "Go";
       clicked => {
-        root.on_go_pressed()         
+        if(state_flag != StateFlag.waiting) {
+          root.on_go_pressed()         
+        }
       }
   }
 }
+
+

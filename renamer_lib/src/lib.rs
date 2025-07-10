@@ -9,7 +9,7 @@ use rayon::iter::{IntoParallelIterator, ParallelIterator};
 use runner::RunnerConfig;
 pub use runner::run_actions;
 
-#[derive(Default, Debug)]
+#[derive(Default, Debug, Clone)]
 pub struct ActionGroup {
     id: i32,
     files: HashMap<i32, PathBuf>,

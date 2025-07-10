@@ -19,11 +19,7 @@ impl Debug for Report {
                 to,
                 overwrote,
             } => {
-                let mut out = format!(
-                    "Renamed {} to {}",
-                    format_report_path(from),
-                    format_report_path(to)
-                );
+                let mut out = format!("Renamed {:?} to {}", from, format_report_path(to));
                 if *overwrote {
                     out.push_str("(OVERWROTE)");
                 }

@@ -1,18 +1,18 @@
 use parking_lot::RwLock;
-use slint::{ModelRc, Weak};
+use slint::{ModelRc, SharedString, ToSharedString, Weak, format};
 use std::{
     cell::OnceCell,
     collections::HashMap,
-    fmt::Debug,
+    fmt::{Debug, Display},
     path::PathBuf,
+    rc::Rc,
     sync::{Arc, LazyLock, Mutex},
-    thread,
-    thread::JoinHandle,
+    thread::{self, JoinHandle},
 };
 
-use crate::lib_thread::{self, FromLibMessage, FromLibReciever, ToLibSender};
+use crate::lib_thread::{self, FromLibMessage, FromLibReciever, ToLibMessage, ToLibSender};
 use crate::slint_generatedRenamerWindow::{RenamerWindow, S_Action, S_ActionGroup, S_File};
-use renamer_lib::{Action, ActionGroup, ActionType, RenamingPattern};
+use renamer_lib::{Action, ActionGroup, ActionType, RenamingPattern, report::Report};
 
 // slint::include_modules!();
 
@@ -115,17 +115,61 @@ impl Renamer {
             group.actions_mut().remove(&action_id);
         }
     }
-    pub fn send_message(&mut self) {}
+    pub fn send_message(&mut self, msg: ToLibMessage) {
+        let _ = self.sender.send(msg).inspect_err(|e| log::error!("{e}"));
+    }
+    pub fn execute_actions(&mut self) {
+        self.send_message(ToLibMessage::ExecuteActions(
+            self.action_groups.values().map(|x| x.clone()).collect(),
+        ));
+    }
     pub fn handle_message(&mut self, msg: FromLibMessage) {
-        if let Some(window) = self.window.upgrade() {
-            match msg {
-                FromLibMessage::SuccessfulActions(vec) => {}
-                FromLibMessage::UnsuccessfulActions(vec) => todo!(),
-            };
-            window.invoke_refresh_state();
-        } else {
-            log::error!("Message recieved while window is gone!");
+        log::trace!("Handling Message: {msg:?}");
+        match msg {
+            FromLibMessage::SuccessfulActions(vec) => {
+                let successes = vec
+                    .into_iter()
+                    .map(report_to_slint_string)
+                    .collect::<Vec<_>>();
+                let _ = self
+                    .window
+                    .upgrade_in_event_loop(move |window| {
+                        window.set_successes(successes.as_slice().into());
+                        window.set_state_flag(crate::StateFlag::Finished);
+                    })
+                    .inspect_err(|e| log::error!("Error handling message!: {e}"));
+            }
+            FromLibMessage::UnsuccessfulActions(vec) => {
+                let failures = vec
+                    .into_iter()
+                    .map(|x| x.to_shared_string())
+                    .collect::<Vec<_>>();
+                let _ = self
+                    .window
+                    .upgrade_in_event_loop(move |window| {
+                        window.set_failures(failures.as_slice().into());
+                        window.set_state_flag(crate::StateFlag::Finished);
+                    })
+                    .inspect_err(|e| log::error!("Error handling message!: {e}"));
+            }
+        };
+    }
+}
+
+fn report_to_slint_string(report: Report) -> SharedString {
+    match report {
+        Report::Renamed {
+            from,
+            to,
+            overwrote,
+        } => {
+            let mut out = format!("Renamed: \n {from:?} \n to \n {to:?}");
+            if overwrote {
+                out.push_str("\n (OVERWROTE)");
+            }
+            SharedString::from(out)
         }
+        Report::Nothing => SharedString::from(""),
     }
 }
 
