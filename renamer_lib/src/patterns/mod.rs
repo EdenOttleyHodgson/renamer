@@ -1,31 +1,124 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, error::Error, fs, iter::zip, path::PathBuf};
 
 use regex::Regex;
 
 mod parser;
 
-// 1"^.{0,4}"2:".*\..*"|
+/**
+1"^.{0,4}"2:".*\..*"|/1//RAND/./2/
+2 capture groups, [CaptureGroup(1), Insert::Rand, Literal("."), CaptureGroup(2)]
+*/
 
-struct RenamePattern {
+#[derive(Debug, Clone)]
+pub struct RenamePattern {
     capture_groups: HashMap<usize, Regex>,
     elements: Vec<PatternElem>,
 }
+impl RenamePattern {
+    pub fn apply_to_file_name(&self, fpath: &PathBuf) -> Result<PathBuf, Box<dyn Error>> {
+        let fpath = fpath.canonicalize()?;
+        let fname = fpath.file_name().unwrap().to_string_lossy().to_string(); //TODO: Error handle
+        let mut capture_group_texts: HashMap<usize, String> = HashMap::new();
+        for (id, regex) in self.capture_groups.iter() {
+            let cap_text = regex.find_iter(&fname).fold(String::new(), |mut acc, s| {
+                acc.push_str(s.as_str());
+                acc
+            });
+            capture_group_texts.insert(*id, cap_text);
+        }
+        let mut out_name = String::new();
+        for element in self.elements.iter() {
+            let to_push = match element {
+                PatternElem::Literal(lit) => lit,
+                PatternElem::Insert(pattern_insert) => match pattern_insert {
+                    PatternInsert::Random => &rand::random::<u32>().to_string(),
+                    PatternInsert::Original => &fname,
+                    PatternInsert::CaptureGroup(id) => capture_group_texts
+                        .get(id)
+                        .expect("Capture groups existence ensured by the parser"),
+                    PatternInsert::DateModified => {
+                        let date_time: chrono::DateTime<chrono::Local> =
+                            fs::metadata(&fpath).unwrap().modified().unwrap().into();
+                        &date_time.to_rfc3339()
+                    } //Error handle
+                    PatternInsert::Now => &chrono::Local::now().to_rfc3339(),
+                },
+                PatternElem::Function(pattern_function) => todo!(),
+            };
+            out_name.push_str(to_push);
+        }
+        let mut new_path = fpath.clone();
+        new_path.pop();
+        new_path.push(out_name);
+        Ok(new_path)
+    }
+}
 
+impl PartialEq for RenamePattern {
+    fn eq(&self, other: &Self) -> bool {
+        if self.capture_groups.len() != other.capture_groups.len() {
+            return false;
+        }
+        if !(self.elements == other.elements) {
+            return false;
+        } else {
+            for id in self.capture_groups.keys() {
+                if let Some(l_regex) = self.capture_groups.get(id) {
+                    if let Some(r_regex) = other.capture_groups.get(id) {
+                        if !(l_regex.as_str() == r_regex.as_str()) {
+                            return false;
+                        }
+                    }
+                } else {
+                    return false;
+                }
+            }
+        }
+        true
+    }
+}
+
+#[derive(PartialEq, Debug, Clone)]
 enum PatternElem {
     Literal(String),
     Insert(PatternInsert),
     Function(PatternFunction),
 }
 
+#[derive(PartialEq, Debug, Clone, Copy)]
 enum PatternInsert {
     Random,
     Original,
     CaptureGroup(usize),
     DateModified,
-    Today,
+    Now,
+}
+impl<'a> TryFrom<&'a str> for PatternInsert {
+    type Error = parser::PatternParseError<'a>;
+
+    fn try_from(value: &'a str) -> Result<Self, Self::Error> {
+        println!("{value}");
+        match value {
+            "RAND" => Ok(Self::Random),
+            "ORIG" | "ORIGINAL" => Ok(Self::Original),
+            "DATE_MODIFIED" => Ok(Self::DateModified),
+            "NOW" => Ok(Self::Now),
+            _ => Err(parser::PatternParseError::NonexistentInsert(value)),
+        }
+    }
 }
 
+#[derive(PartialEq, Debug, Clone)]
 enum PatternFunction {
     Uppercase(PatternInsert),
     Lowercase(PatternInsert),
+}
+
+#[cfg(test)]
+mod test {
+    #[test]
+    fn basic_test() {
+        let input_pattern = "1\"^.{0,4}\"2\".*\\..*\"|/cap1//RAND/./cap2/";
+        let input_files = vec!["Ploggle.txt", "Groggle.txt"];
+    }
 }

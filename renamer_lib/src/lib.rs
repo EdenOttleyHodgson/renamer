@@ -76,7 +76,7 @@ impl ActionGroup {
 #[derive(Debug, Clone)]
 pub enum Action {
     Randomize,
-    Rename(RenamingPattern),
+    Rename(patterns::RenamePattern),
 }
 
 impl Action {

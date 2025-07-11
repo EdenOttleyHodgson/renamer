@@ -3839,6 +3839,7 @@ dependencies = [
 name = "renamer_lib"
 version = "0.1.0"
 dependencies = [
+ "chrono",
  "env_logger",
  "log",
  "nom 8.0.0",
