@@ -45,6 +45,7 @@ impl RenamePattern {
                 },
                 PatternElem::Function(pattern_function) => todo!(),
             };
+            println!("pushing : {to_push}");
             out_name.push_str(to_push);
         }
         let mut new_path = fpath.clone();
@@ -116,9 +117,44 @@ enum PatternFunction {
 
 #[cfg(test)]
 mod test {
+    use std::{fs, path::PathBuf};
+
+    use super::RenamePattern;
+
     #[test]
     fn basic_test() {
-        let input_pattern = "1\"^.{0,4}\"2\".*\\..*\"|/cap1//RAND/./cap2/";
-        let input_files = vec!["Ploggle.txt", "Groggle.txt"];
+        let input_pattern = r#"1"^.{0,4}"2"\..*"|/cap1//RAND/#/cap2/"#;
+        let input_files: Vec<PathBuf> = vec!["Ploggle.txt".into(), "Groggle.jpeg".into()];
+        for file in input_files.iter() {
+            fs::File::create(file);
+        }
+        let expected: Vec<(String, String)> = vec![
+            ("Plog".into(), "#.txt".into()),
+            ("Grog".into(), "#.jpeg".into()),
+        ];
+        let pattern = RenamePattern::try_from(input_pattern).unwrap();
+        let result: Vec<(String, String, String)> = input_files
+            .iter()
+            .map(|path| pattern.apply_to_file_name(path).unwrap())
+            .map(|x| {
+                println!("{}", x.display());
+                let left = x.file_name().unwrap().to_string_lossy().to_string()[0..4].to_owned();
+                let (middle, last) = {
+                    let mut s = x.file_stem().unwrap().to_string_lossy().to_string();
+                    (s[4..s.len() - 2].to_owned(), s.pop().unwrap())
+                };
+                let right = format!("{last}.{}", x.extension().unwrap().to_string_lossy());
+                (left, middle, right)
+            })
+            .collect();
+        for file in input_files.iter() {
+            fs::remove_file(file);
+        }
+        println!("{result:?}");
+        for res in result.iter().map(|x| &x.1) {
+            str::parse::<u32>(res).unwrap();
+        }
+        let result: Vec<_> = result.into_iter().map(|x| (x.0, x.2)).collect();
+        assert!(result == expected, "{result:?} != {expected:?}")
     }
 }

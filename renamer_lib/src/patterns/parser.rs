@@ -63,6 +63,7 @@ impl<'a> TryFrom<&'a str> for super::RenamePattern {
     type Error = nom::Err<PatternParseError<'a>>;
     fn try_from(value: &'a str) -> Result<Self, Self::Error> {
         let pattern = parse_pattern.parse(value).map(|x| x.1)?;
+        println!("{pattern:?}");
         for elem in pattern.elements.iter() {
             if let PatternElem::Insert(PatternInsert::CaptureGroup(cap_group)) = elem {
                 if !pattern.capture_groups.contains_key(cap_group) {
