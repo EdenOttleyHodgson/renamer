@@ -2,6 +2,9 @@ use std::{collections::HashMap, error::Error, fs, iter::zip, path::PathBuf};
 
 use regex::Regex;
 
+pub use parser::PatternParseError;
+
+use crate::error::SendableErr;
 mod parser;
 
 /**
@@ -15,7 +18,7 @@ pub struct RenamePattern {
     elements: Vec<PatternElem>,
 }
 impl RenamePattern {
-    pub fn apply_to_file_name(&self, fpath: &PathBuf) -> Result<PathBuf, Box<dyn Error>> {
+    pub fn apply_to_file_name(&self, fpath: &PathBuf) -> Result<PathBuf, SendableErr> {
         let fpath = fpath.canonicalize()?;
         let fname = fpath.file_name().unwrap().to_string_lossy().to_string(); //TODO: Error handle
         let mut capture_group_texts: HashMap<usize, String> = HashMap::new();
