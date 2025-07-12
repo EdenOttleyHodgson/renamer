@@ -45,7 +45,6 @@ impl RenamePattern {
                 },
                 PatternElem::Function(pattern_function) => todo!(),
             };
-            println!("pushing : {to_push}");
             out_name.push_str(to_push);
         }
         let mut new_path = fpath.clone();
@@ -98,7 +97,6 @@ impl<'a> TryFrom<&'a str> for PatternInsert {
     type Error = parser::PatternParseError<'a>;
 
     fn try_from(value: &'a str) -> Result<Self, Self::Error> {
-        println!("{value}");
         match value {
             "RAND" => Ok(Self::Random),
             "ORIG" | "ORIGINAL" => Ok(Self::Original),

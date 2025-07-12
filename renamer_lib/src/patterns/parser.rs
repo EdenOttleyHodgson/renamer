@@ -92,7 +92,7 @@ fn parse_pattern(inp: &str) -> PatternParseResult<&str, super::RenamePattern> {
     //     Err(e) => (HashMap::new(), parse_pattern_elems.parse(inp)?.1),
     // };
     //
-    println!("orig input: {inp}");
+    log::trace!("orig input: {inp}");
     let (inp, capture_groups) = opt(parse_capture_groups).parse(inp)?;
     // let (inp, capture_groups) = match cap_group_res {
     //     Ok((inp, caps)) => (inp, caps),
@@ -127,9 +127,8 @@ fn parse_capture_groups(inp: &str) -> PatternParseResult<&str, HashMap<usize, Re
 }
 
 fn parse_capture_group(inp: &str) -> PatternParseResult<&str, (usize, Regex)> {
-    println!("Parsing cap group: {inp}");
+    log::trace!("Parsing cap group: {inp}");
     let (inp, parsed_id) = digit1().parse(inp)?;
-    println!("Parsed id");
     let group_id: usize = match str::parse::<usize>(parsed_id) {
         Ok(r) => r,
         Err(e) => {
@@ -139,7 +138,7 @@ fn parse_capture_group(inp: &str) -> PatternParseResult<&str, (usize, Regex)> {
     };
     let (inp, _) = char('"').parse(inp)?;
     let (inp, regex) = parse_cap_group_regex.parse(inp)?;
-    println!("Finishing parsing cap group : {inp}, {regex:?}");
+    log::trace!("Finishing parsing cap group : {inp}, {regex:?}");
     Ok((inp, (group_id, regex)))
 }
 

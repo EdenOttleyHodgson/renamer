@@ -1,6 +1,6 @@
 pub mod error;
 mod file_actions;
-mod patterns;
+pub mod patterns;
 pub mod report;
 mod runner;
 use std::{collections::HashMap, path::PathBuf};
@@ -83,7 +83,7 @@ impl Action {
     fn make_file_action(&self, file: PathBuf) -> FileAction {
         let action_type = match self {
             Action::Randomize => FileActionType::Randomize,
-            Action::Rename(renaming_pattern) => todo!(), //Do like, pattern processing here
+            Action::Rename(renaming_pattern) => {} //Do like, pattern processing here
         };
         FileAction::new(action_type, file)
     }

@@ -12,7 +12,9 @@ use std::{
 
 use crate::lib_thread::{self, FromLibMessage, FromLibReciever, ToLibMessage, ToLibSender};
 use crate::slint_generatedRenamerWindow::{RenamerWindow, S_Action, S_ActionGroup, S_File};
-use renamer_lib::{Action, ActionGroup, ActionType, RenamingPattern, report::Report};
+use renamer_lib::{
+    Action, ActionGroup, ActionType, RenamingPattern, patterns::RenamePattern, report::Report,
+};
 
 // slint::include_modules!();
 
@@ -177,7 +179,11 @@ impl TryFrom<S_Action> for renamer_lib::Action {
     fn try_from(value: S_Action) -> Result<Self, String> {
         match value.action_type.as_str() {
             "Randomize" => Ok(Action::Randomize),
-            "Rename" => Ok(Action::Rename(RenamingPattern)),
+            "Rename" => {
+                let pattern = RenamePattern::try_from(value.action_info.as_str())
+                    .map_err(|x| x.to_string())?;
+                Ok(Action::Rename(pattern))
+            }
             _ => {
                 log::error!("Bad S_Action type!");
                 Err("Bad S_Action Type!".to_owned())
