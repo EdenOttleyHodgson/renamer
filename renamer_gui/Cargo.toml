@@ -6,6 +6,7 @@ edition = "2024"
 [dependencies]
 collect_slice = "1.2.0"
 env_logger = "0.11.8"
+itertools = "0.14.0"
 log = "0.4.27"
 parking_lot = "0.12.4"
 renamer_lib = { path = "../renamer_lib" }

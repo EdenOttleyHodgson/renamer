@@ -1,3 +1,4 @@
+use itertools::Itertools;
 use parking_lot::RwLock;
 use slint::{ModelRc, SharedString, ToSharedString, Weak, format};
 use std::{
@@ -61,6 +62,9 @@ impl Renamer {
             next_action_group_id: 0,
             window,
         }
+    }
+    pub fn cleanup(&mut self) {
+        self.send_message(ToLibMessage::Cleanup);
     }
     fn set_reciever_handle(&mut self, handle: JoinHandle<()>) {
         self.reciever_handle = Some(handle);
@@ -222,7 +226,12 @@ impl TryInto<RenamePattern> for S_Action {
     type Error = Box<dyn Error>;
 
     fn try_into(self) -> Result<RenamePattern, Self::Error> {
-        RenamePattern::try_from(self.pattern.as_str()).map_err(|x| x.into())
+        match self.preset {
+            S_Preset::Randomize => Ok(RenamePattern::randomize()),
+            S_Preset::Custom => {
+                RenamePattern::try_from(self.pattern.as_str()).map_err(|x| x.into())
+            }
+        }
     }
 }
 
@@ -257,13 +266,15 @@ impl Into<S_ActionGroup> for (&i32, &ActionGroup) {
                 .patterns()
                 .iter()
                 .map(|x| x.into())
-                .collect::<Vec<S_Action>>()
+                .sorted_by_key(|x: &S_Action| x.id)
+                .collect::<Vec<_>>()
                 .as_slice()
                 .into(),
             files: group
                 .files()
                 .iter()
                 .map(|x| x.into())
+                .sorted_by_key(|x: &S_File| x.id)
                 .collect::<Vec<_>>()
                 .as_slice()
                 .into(),

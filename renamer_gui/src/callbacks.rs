@@ -47,6 +47,10 @@ fn go_pressed(state: RenamerState) {
     state.write().execute_actions();
 }
 
+fn cleanup(state: RenamerState) {
+    state.write().cleanup();
+}
+
 pub fn set_callbacks(window: &RenamerWindow, state: RenamerState) {
     let s = state.clone();
     window.on_add_file(move |group_id| add_file(group_id, s.clone()));
@@ -63,6 +67,8 @@ pub fn set_callbacks(window: &RenamerWindow, state: RenamerState) {
     window.on_remove_action_group(move |group_id| remove_action_group(group_id, s.clone()));
     let s = state.clone();
     window.on_on_go_pressed(move || go_pressed(s.clone()));
+    let s = state.clone();
+    window.on_cleanup(move || cleanup(s.clone()));
     let weak_window = window.as_weak();
     window.on_refresh_state(move || refresh_state(weak_window.clone(), state.clone()));
 }

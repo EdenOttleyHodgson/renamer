@@ -10,6 +10,7 @@ use renamer_lib::{ActionGroup, error::ActionError, report::Report};
 #[derive(Debug)]
 pub enum ToLibMessage {
     ExecuteActions(Vec<ActionGroup>),
+    Cleanup,
 }
 #[derive(Debug)]
 pub enum FromLibMessage {
@@ -35,7 +36,13 @@ impl LibWrapper {
     fn event_loop(mut self) {
         loop {
             match self.receiver.recv() {
-                Ok(msg) => self.handle_message(msg),
+                Ok(msg) => {
+                    if matches!(msg, ToLibMessage::Cleanup) {
+                        break;
+                    } else {
+                        self.handle_message(msg)
+                    }
+                }
                 Err(e) => {
                     log::error!("{e}");
                     break;
@@ -48,6 +55,7 @@ impl LibWrapper {
             ToLibMessage::ExecuteActions(act_groups) => {
                 self.handle_execute_actions(act_groups);
             }
+            ToLibMessage::Cleanup => unreachable!(),
         }
     }
 

@@ -22,6 +22,7 @@ export component RenamerWindow inherits Window{
   callback on_finished;
   callback handle_message;
   callback refresh_state;
+  callback cleanup;
   in property<[S_ActionGroup]> action-groups;
   in property<[string]> successes;
   in property<[string]> failures;

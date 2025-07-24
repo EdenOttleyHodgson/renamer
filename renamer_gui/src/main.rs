@@ -20,6 +20,8 @@ fn main() -> Result<(), Box<dyn Error>> {
     set_callbacks(&window, state.clone());
     window.invoke_refresh_state();
     window.run()?;
+    window.invoke_cleanup();
+
     let _ = lib_handle.join();
     Ok(())
 }
