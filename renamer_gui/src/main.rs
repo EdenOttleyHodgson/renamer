@@ -2,11 +2,10 @@ mod callbacks;
 mod lib_thread;
 mod state;
 use std::error::Error;
-use std::fmt::Debug;
 
 pub(crate) type SendableErr = Box<dyn Error + Send + Sync>;
 use callbacks::set_callbacks;
-use slint::{ComponentHandle, ModelRc, VecModel};
+use slint::ComponentHandle;
 slint::include_modules!();
 
 fn main() -> Result<(), Box<dyn Error>> {
@@ -15,7 +14,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         .init();
     log::debug!("Hello !");
     let window = RenamerWindow::new()?;
-    let (state, lib_handle) = state::init_state_debug(window.as_weak());
+    let (state, lib_handle) = state::init_state(window.as_weak());
 
     set_callbacks(&window, state.clone());
     window.invoke_refresh_state();

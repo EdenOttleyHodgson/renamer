@@ -1,4 +1,4 @@
-use std::{error::Error, sync::PoisonError};
+use std::error::Error;
 use thiserror::Error;
 
 pub(crate) type SendableErr = Box<dyn Error + Send + Sync>;

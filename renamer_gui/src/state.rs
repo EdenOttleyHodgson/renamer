@@ -2,17 +2,15 @@ use itertools::Itertools;
 use parking_lot::RwLock;
 use slint::{ModelRc, SharedString, ToSharedString, Weak, format};
 use std::{
-    cell::OnceCell,
     collections::HashMap,
     error::Error,
-    fmt::{Debug, Display},
+    fmt::Debug,
     path::PathBuf,
-    rc::Rc,
-    sync::{Arc, LazyLock, Mutex},
+    sync::Arc,
     thread::{self, JoinHandle},
 };
 
-use crate::lib_thread::{self, FromLibMessage, FromLibReciever, ToLibMessage, ToLibSender};
+use crate::lib_thread::{self, FromLibMessage, ToLibMessage, ToLibSender};
 use crate::slint_generatedRenamerWindow::{
     RenamerWindow, S_Action, S_ActionGroup, S_File, S_Preset,
 };
@@ -26,20 +24,13 @@ pub type RenamerState = Arc<RwLock<Renamer>>;
 pub fn init_state(window: Weak<RenamerWindow>) -> (RenamerState, JoinHandle<()>) {
     let (lib_handle, sender, reciever) = lib_thread::setup();
     let renamer = Renamer::new(sender, window);
-    (Arc::new(RwLock::new(renamer)), lib_handle)
-}
-
-pub fn init_state_debug(window: Weak<RenamerWindow>) -> (RenamerState, JoinHandle<()>) {
-    let (lib_handle, sender, reciever) = lib_thread::setup();
-    let mut renamer = Renamer::new(sender, window);
-    renamer.new_action_group();
-    renamer.add_patterns_to_group(0, vec![RenamePattern::randomize()]);
     let renamer_state = Arc::new(RwLock::new(renamer));
     let s = renamer_state.clone();
     let reciever_handle = thread::spawn(move || lib_thread::handle_gui_messages(reciever, s));
     renamer_state.write().set_reciever_handle(reciever_handle);
     (renamer_state, lib_handle)
 }
+
 pub struct Renamer {
     sender: ToLibSender,
     reciever_handle: Option<JoinHandle<()>>,
@@ -180,39 +171,6 @@ fn report_to_slint_string(report: Report) -> SharedString {
     }
 }
 
-// impl TryFrom<S_Action> for renamer_lib::Action {
-//     fn try_from(value: S_Action) -> Result<Self, String> {
-//         match value.action_type.as_str() {
-//             "Randomize" => Ok(Action::Randomize),
-//             "Rename" => {
-//                 let pattern = RenamePattern::try_from(value.action_info.as_str())
-//                     .map_err(|x| x.to_string())?;
-//                 Ok(Action::Rename(pattern))
-//             }
-//             _ => {
-//                 log::error!("Bad S_Action type!");
-//                 Err("Bad S_Action Type!".to_owned())
-//             }
-//         }
-//     }
-//
-//     type Error = String;
-// }
-
-// impl Into<S_Action> for (&i32, &renamer_lib::Action) {
-//     fn into(self) -> S_Action {
-//         let action_info = match self.1 {
-//             renamer_lib::Action::Randomize => "".into(),
-//             renamer_lib::Action::Rename(renaming_pattern) => "Rename: Pattern TODO",
-//         }
-//         .into();
-//         S_Action {
-//             action_info,
-//             action_type: self.1.get_type().to_string().into(),
-//             id: *self.0,
-//         }
-//     }
-// }
 impl Into<S_File> for (&i32, &PathBuf) {
     fn into(self) -> S_File {
         S_File {

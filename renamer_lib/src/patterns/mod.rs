@@ -1,4 +1,4 @@
-use std::{collections::HashMap, error::Error, fs, iter::zip, path::PathBuf};
+use std::{collections::HashMap, fs, path::PathBuf};
 
 use regex::Regex;
 
@@ -6,11 +6,6 @@ pub use parser::PatternParseError;
 
 use crate::error::SendableErr;
 mod parser;
-
-/**
-1"^.{0,4}"2:".*\..*"|/1//RAND/./2/
-2 capture groups, [CaptureGroup(1), Insert::Rand, Literal("."), CaptureGroup(2)]
-*/
 
 #[derive(Debug, Clone)]
 pub struct RenamePattern {
@@ -56,7 +51,6 @@ impl RenamePattern {
                     } //Error handle
                     PatternInsert::Now => &chrono::Local::now().to_rfc3339(),
                 },
-                PatternElem::Function(pattern_function) => todo!(),
             };
             out_name.push_str(to_push);
         }
@@ -103,7 +97,6 @@ impl PartialEq for RenamePattern {
 enum PatternElem {
     Literal(String),
     Insert(PatternInsert),
-    Function(PatternFunction),
 }
 
 #[derive(PartialEq, Debug, Clone, Copy)]
@@ -128,12 +121,6 @@ impl<'a> TryFrom<&'a str> for PatternInsert {
             )),
         }
     }
-}
-
-#[derive(PartialEq, Debug, Clone)]
-enum PatternFunction {
-    Uppercase(PatternInsert),
-    Lowercase(PatternInsert),
 }
 
 #[cfg(test)]

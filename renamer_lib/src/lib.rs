@@ -1,11 +1,10 @@
 pub mod error;
 pub mod patterns;
 pub mod report;
-use std::{collections::HashMap, fs, ops::Deref, path::PathBuf, sync::Arc};
+use std::{collections::HashMap, fs, path::PathBuf};
 
 use error::SendableErr;
 pub use patterns::{PatternParseError, RenamePattern};
-use rand::seq::IndexedRandom;
 use rayon::iter::{IntoParallelIterator, IntoParallelRefIterator, ParallelIterator};
 use report::Report;
 

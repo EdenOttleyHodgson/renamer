@@ -1,6 +1,5 @@
-use std::borrow::Cow;
 use std::fmt::Debug;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 pub enum Report {
     Renamed {

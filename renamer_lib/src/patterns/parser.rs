@@ -4,11 +4,10 @@ use nom::{
     self, Parser,
     branch::alt,
     bytes::complete::tag,
-    character::{anychar, char, complete::satisfy, digit1},
+    character::{char, complete::satisfy, digit1},
     combinator::{eof, opt},
     error::ParseError,
-    multi::{self, many_till, many0, many1},
-    sequence::{self, terminated},
+    multi::{many_till, many1},
 };
 use regex::Regex;
 use thiserror::Error;
@@ -52,12 +51,12 @@ impl<'a> ParseError<&'a str> for PatternParseError {
         Self::NomError(nom::error::Error::new(input.to_owned(), kind))
     }
 
-    fn append(input: &str, kind: nom::error::ErrorKind, other: Self) -> Self {
+    fn append(_: &str, _: nom::error::ErrorKind, other: Self) -> Self {
         other
     }
 }
 
-use super::{PatternElem, PatternFunction, PatternInsert, RenamePattern};
+use super::{PatternElem, PatternInsert, RenamePattern};
 
 impl<'a> TryFrom<&'a str> for super::RenamePattern {
     type Error = nom::Err<PatternParseError>;
@@ -78,38 +77,8 @@ impl<'a> TryFrom<&'a str> for super::RenamePattern {
 }
 
 fn parse_pattern(inp: &str) -> PatternParseResult<&str, super::RenamePattern> {
-    // let (capture_groups, elements) = match nom::sequence::separated_pair(
-    //     parse_capture_groups,
-    //     nom::character::char('|'),
-    //     parse_pattern_elems,
-    // )
-    // .parse(inp)
-    // {
-    //     Ok(r) => {
-    //         println!("{}", r.0);
-    //         r.1
-    //     }
-    //     Err(e) => (HashMap::new(), parse_pattern_elems.parse(inp)?.1),
-    // };
-    //
     let orig_inp = inp.to_owned();
     let (inp, capture_groups) = opt(parse_capture_groups).parse(inp)?;
-    // let (inp, capture_groups) = match cap_group_res {
-    //     Ok((inp, caps)) => (inp, caps),
-    //     Err(e) => {
-    //         let x = e.map(|x| match x {
-    //             PatternParseError::NomError(error) => {
-    //                 println!("scraggle {}|{:?}", error.input, error.code);
-    //                 format!("scraggle {}|{:?}", error.input, error.code)
-    //             }
-    //             PatternParseError::RegexError(error) => todo!(),
-    //             PatternParseError::NonexistentInsert(_) => todo!(),
-    //             PatternParseError::Other(error) => todo!(),
-    //         });
-    //         println!("cap group error: {x:?}, ");
-    //         ("", None)
-    //     }
-    // };
     let capture_groups = capture_groups.unwrap_or_default();
     let (inp, elements) = parse_pattern_elems
         .parse_complete(inp)
@@ -209,10 +178,6 @@ fn parse_capture_group_insert(inp: &str) -> PatternParseResult<&str, PatternElem
     ))
 }
 
-fn parse_function(inp: &str) -> PatternParseResult<&str, PatternElem> {
-    todo!()
-}
-
 #[cfg(test)]
 mod test {
     use std::collections::HashMap;
@@ -221,10 +186,6 @@ mod test {
 
     use crate::patterns::{PatternElem, PatternInsert, RenamePattern};
 
-    /**
-    1"^.{0,4}"2:".*\..*"|/1//RAND/./2/
-    2 capture groups, [CaptureGroup(1), Insert::Rand, Literal("."), CaptureGroup(2)]
-    */
     #[test]
     fn basic_test() {
         let input = "1\"^.{0,4}\"2\".*\\..*\"|/cap1//RAND/./cap2/";

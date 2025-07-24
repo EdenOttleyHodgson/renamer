@@ -3,9 +3,8 @@ use std::{
     thread::{self, JoinHandle},
 };
 
-use crate::{SendableErr, slint_generatedRenamerWindow::RenamerWindow, state::RenamerState};
-use log::trace;
-use renamer_lib::{ActionGroup, error::ActionError, report::Report};
+use crate::{SendableErr, state::RenamerState};
+use renamer_lib::{ActionGroup, report::Report};
 
 #[derive(Debug)]
 pub enum ToLibMessage {
@@ -23,7 +22,6 @@ pub type ToLibSender = mpsc::Sender<ToLibMessage>;
 type ToLibReciever = mpsc::Receiver<ToLibMessage>;
 type FromLibSender = mpsc::Sender<FromLibMessage>;
 pub type FromLibReciever = mpsc::Receiver<FromLibMessage>;
-static THREADS: usize = 8;
 
 struct LibWrapper {
     sender: FromLibSender,
