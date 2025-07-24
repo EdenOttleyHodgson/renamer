@@ -1,4 +1,4 @@
-import {S_ActionGroup, S_File, S_Action} from "./structs.slint";
+import {S_ActionGroup, S_File, S_Action, S_Preset} from "./structs.slint";
 import {Button, ListView} from "std-widgets.slint";
 component FileComponent {
   in property <S_File> file;
@@ -22,16 +22,33 @@ component ActionComponent {
   in property <S_Action> action;
   padding: 5px;
   callback on_remove_action(int);
+  function preset_text() -> string {
+    if action.preset == S_Preset.randomize {
+      return "Randomize";
+    } else if action.preset == S_Preset.custom {
+      return "Custom";
+    } else {
+      return "Unrecognized Preset";
+    }
+  }
+  function pattern_text() -> string {
+    if action.pattern == "" && action.preset != S_Preset.custom {
+      return "Preset Pattern";
+    } else {
+      return action.pattern;
+    }
+
+  }
   HorizontalLayout {
     padding: 5px;
     VerticalLayout {
       Text {
-        text: action.action-type;
+        text: preset_text();
         vertical-alignment:center;
         horizontal-alignment: center;
       }
       Text {
-        text: action.action-info;
+        text: pattern_text();
         vertical-alignment:center;
         horizontal-alignment: center;
       }

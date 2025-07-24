@@ -1,8 +1,11 @@
-
+export enum S_Preset {
+  randomize,
+  custom
+}
 export struct S_Action {
   id: int,
-  action_type: string,
-  action_info: string, 
+  preset: S_Preset,
+  pattern: string
 }
 export struct S_File {
   id: int,
@@ -14,5 +17,7 @@ export struct S_ActionGroup {
   actions: [S_Action],
   files: [S_File]
 }
+
+
 
 

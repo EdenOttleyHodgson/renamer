@@ -4,6 +4,7 @@ mod state;
 use std::error::Error;
 use std::fmt::Debug;
 
+pub(crate) type SendableErr = Box<dyn Error + Send + Sync>;
 use callbacks::set_callbacks;
 use slint::{ComponentHandle, ModelRc, VecModel};
 slint::include_modules!();

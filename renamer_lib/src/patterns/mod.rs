@@ -16,8 +16,18 @@ mod parser;
 pub struct RenamePattern {
     capture_groups: HashMap<usize, Regex>,
     elements: Vec<PatternElem>,
+    preset_info: Option<&'static str>,
+    input: Option<String>,
 }
 impl RenamePattern {
+    pub fn randomize() -> Self {
+        Self {
+            capture_groups: HashMap::default(),
+            elements: vec![PatternElem::Insert(PatternInsert::Random)],
+            preset_info: Some("Randomize"),
+            input: None,
+        }
+    }
     pub fn apply_to_file_name(&self, fpath: &PathBuf) -> Result<PathBuf, SendableErr> {
         let fpath = fpath.canonicalize()?;
         let fname = fpath.file_name().unwrap().to_string_lossy().to_string(); //TODO: Error handle
@@ -54,6 +64,14 @@ impl RenamePattern {
         new_path.pop();
         new_path.push(out_name);
         Ok(new_path)
+    }
+
+    pub fn preset_info(&self) -> Option<&'static str> {
+        self.preset_info
+    }
+
+    pub fn input(&self) -> Option<&String> {
+        self.input.as_ref()
     }
 }
 
@@ -97,7 +115,7 @@ enum PatternInsert {
     Now,
 }
 impl<'a> TryFrom<&'a str> for PatternInsert {
-    type Error = parser::PatternParseError<'a>;
+    type Error = parser::PatternParseError;
 
     fn try_from(value: &'a str) -> Result<Self, Self::Error> {
         match value {
@@ -105,7 +123,9 @@ impl<'a> TryFrom<&'a str> for PatternInsert {
             "ORIG" | "ORIGINAL" => Ok(Self::Original),
             "DATE_MODIFIED" => Ok(Self::DateModified),
             "NOW" => Ok(Self::Now),
-            _ => Err(parser::PatternParseError::NonexistentInsert(value)),
+            _ => Err(parser::PatternParseError::NonexistentInsert(
+                value.to_owned(),
+            )),
         }
     }
 }

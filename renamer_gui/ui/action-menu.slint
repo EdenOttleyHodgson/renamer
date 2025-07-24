@@ -1,27 +1,33 @@
-import {S_Action} from "./structs.slint";
+import {S_Action, S_Preset} from "./structs.slint";
 import {ComboBox, Button} from "std-widgets.slint";
 export component ActionMenu inherits Rectangle{
   callback on_confirm( S_Action);
   callback on_cancel;
-  property <S_Action> action: {action_type: "", action_info: ""};
-  public function to_s_action() -> S_Action {
-    action.action_type = selector.current-value;
-    action.action_info = input.text;
-    return action;
+  property <S_Preset> preset: preset-from-string(selector.current-value);
+  pure function preset-from-string(inp: string) -> S_Preset {
+    if inp == "Randomize" {
+      return S_Preset.randomize;
+    }
+    return S_Preset.custom; 
   } 
+  function make_s_action() -> S_Action{
+    return {id: -1, pattern: input.text, preset: preset};
+
+  }
   states [
-      active when selector.current-value == "Rename": {
+      active when preset == S_Preset.custom : {
         input-rect.visible: true;
       }
-      active when selector.current-value != "Rename": {
+      active when preset != S_Preset.custom: {
         input-rect.visible: false;
+
       }
   ]
   VerticalLayout {
     padding: 10px;
     selector := ComboBox {
       max-height: parent.height *0.1;
-      model: ["Randomize", "Rename"]; 
+      model: ["Randomize", "Custom"]; 
       padding: 5px;
     }
     input-rect:= Rectangle {
@@ -40,7 +46,7 @@ export component ActionMenu inherits Rectangle{
         max-width: parent.width;
         padding: 5px;
         text: "Confirm";
-        clicked => {root.on_confirm( to_s_action())} 
+        clicked => {root.on_confirm( make_s_action())} 
       }
       Button {
         max-width: parent.width;

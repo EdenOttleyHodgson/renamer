@@ -18,8 +18,8 @@ fn remove_file(group_id: i32, file_id: i32, state: RenamerState) {
     state.write().remove_file_from_group(group_id, file_id);
 }
 fn add_action(group_id: i32, action: S_Action, state: RenamerState) {
-    match renamer_lib::Action::try_from(action) {
-        Ok(new_action) => state.write().add_action_to_group(group_id, new_action),
+    match action.try_into() {
+        Ok(new_action) => state.write().add_pattern_to_group(group_id, new_action),
         Err(e) => log::error!("Error adding action!: {e}"),
     }
 }

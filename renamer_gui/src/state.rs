@@ -3,6 +3,7 @@ use slint::{ModelRc, SharedString, ToSharedString, Weak, format};
 use std::{
     cell::OnceCell,
     collections::HashMap,
+    error::Error,
     fmt::{Debug, Display},
     path::PathBuf,
     rc::Rc,
@@ -11,10 +12,10 @@ use std::{
 };
 
 use crate::lib_thread::{self, FromLibMessage, FromLibReciever, ToLibMessage, ToLibSender};
-use crate::slint_generatedRenamerWindow::{RenamerWindow, S_Action, S_ActionGroup, S_File};
-use renamer_lib::{
-    Action, ActionGroup, ActionType, RenamingPattern, patterns::RenamePattern, report::Report,
+use crate::slint_generatedRenamerWindow::{
+    RenamerWindow, S_Action, S_ActionGroup, S_File, S_Preset,
 };
+use renamer_lib::{ActionGroup, patterns::RenamePattern, report::Report};
 
 // slint::include_modules!();
 
@@ -31,7 +32,7 @@ pub fn init_state_debug(window: Weak<RenamerWindow>) -> (RenamerState, JoinHandl
     let (lib_handle, sender, reciever) = lib_thread::setup();
     let mut renamer = Renamer::new(sender, window);
     renamer.new_action_group();
-    renamer.add_actions_to_group(0, vec![Action::Randomize]);
+    renamer.add_patterns_to_group(0, vec![RenamePattern::randomize()]);
     let renamer_state = Arc::new(RwLock::new(renamer));
     let s = renamer_state.clone();
     let reciever_handle = thread::spawn(move || lib_thread::handle_gui_messages(reciever, s));
@@ -91,18 +92,18 @@ impl Renamer {
             log::error!("Non existent action group id!: {} for state {:?}", id, self)
         }
     }
-    pub fn add_actions_to_group(&mut self, id: i32, actions: Vec<Action>) {
+    pub fn add_patterns_to_group(&mut self, id: i32, patterns: Vec<RenamePattern>) {
         if let Some(group) = self.action_groups.get_mut(&id) {
-            for action in actions {
-                group.add_action(action);
+            for action in patterns {
+                group.add_pattern(action);
             }
         } else {
             log::error!("Non existent action group id!: {} for state {:?}", id, self)
         }
     }
-    pub fn add_action_to_group(&mut self, id: i32, action: Action) {
+    pub fn add_pattern_to_group(&mut self, id: i32, pattern: RenamePattern) {
         if let Some(group) = self.action_groups.get_mut(&id) {
-            group.add_action(action);
+            group.add_pattern(pattern);
         } else {
             log::error!("Non existent action group id!: {} for state {:?}", id, self)
         }
@@ -114,7 +115,7 @@ impl Renamer {
     }
     pub fn remove_action_from_group(&mut self, group_id: i32, action_id: i32) {
         if let Some(group) = self.action_groups.get_mut(&group_id) {
-            group.actions_mut().remove(&action_id);
+            group.patterns_mut().remove(&action_id);
         }
     }
     pub fn send_message(&mut self, msg: ToLibMessage) {
@@ -175,39 +176,39 @@ fn report_to_slint_string(report: Report) -> SharedString {
     }
 }
 
-impl TryFrom<S_Action> for renamer_lib::Action {
-    fn try_from(value: S_Action) -> Result<Self, String> {
-        match value.action_type.as_str() {
-            "Randomize" => Ok(Action::Randomize),
-            "Rename" => {
-                let pattern = RenamePattern::try_from(value.action_info.as_str())
-                    .map_err(|x| x.to_string())?;
-                Ok(Action::Rename(pattern))
-            }
-            _ => {
-                log::error!("Bad S_Action type!");
-                Err("Bad S_Action Type!".to_owned())
-            }
-        }
-    }
+// impl TryFrom<S_Action> for renamer_lib::Action {
+//     fn try_from(value: S_Action) -> Result<Self, String> {
+//         match value.action_type.as_str() {
+//             "Randomize" => Ok(Action::Randomize),
+//             "Rename" => {
+//                 let pattern = RenamePattern::try_from(value.action_info.as_str())
+//                     .map_err(|x| x.to_string())?;
+//                 Ok(Action::Rename(pattern))
+//             }
+//             _ => {
+//                 log::error!("Bad S_Action type!");
+//                 Err("Bad S_Action Type!".to_owned())
+//             }
+//         }
+//     }
+//
+//     type Error = String;
+// }
 
-    type Error = String;
-}
-
-impl Into<S_Action> for (&i32, &renamer_lib::Action) {
-    fn into(self) -> S_Action {
-        let action_info = match self.1 {
-            renamer_lib::Action::Randomize => "".into(),
-            renamer_lib::Action::Rename(renaming_pattern) => "Rename: Pattern TODO",
-        }
-        .into();
-        S_Action {
-            action_info,
-            action_type: self.1.get_type().to_string().into(),
-            id: *self.0,
-        }
-    }
-}
+// impl Into<S_Action> for (&i32, &renamer_lib::Action) {
+//     fn into(self) -> S_Action {
+//         let action_info = match self.1 {
+//             renamer_lib::Action::Randomize => "".into(),
+//             renamer_lib::Action::Rename(renaming_pattern) => "Rename: Pattern TODO",
+//         }
+//         .into();
+//         S_Action {
+//             action_info,
+//             action_type: self.1.get_type().to_string().into(),
+//             id: *self.0,
+//         }
+//     }
+// }
 impl Into<S_File> for (&i32, &PathBuf) {
     fn into(self) -> S_File {
         S_File {
@@ -216,12 +217,44 @@ impl Into<S_File> for (&i32, &PathBuf) {
         }
     }
 }
+
+impl TryInto<RenamePattern> for S_Action {
+    type Error = Box<dyn Error>;
+
+    fn try_into(self) -> Result<RenamePattern, Self::Error> {
+        RenamePattern::try_from(self.pattern.as_str()).map_err(|x| x.into())
+    }
+}
+
+impl Into<S_Action> for (&i32, &RenamePattern) {
+    fn into(self) -> S_Action {
+        S_Action {
+            pattern: self.1.input().cloned().unwrap_or("".to_owned()).into(),
+            preset: self.1.preset_info().unwrap_or("Custom").into(),
+            id: *self.0,
+        }
+    }
+}
+
+impl From<&str> for S_Preset {
+    fn from(value: &str) -> Self {
+        match value {
+            "Randomize" => S_Preset::Randomize,
+            "Custom" => S_Preset::Custom,
+            _ => {
+                log::error!("Unrecognized preset!");
+                S_Preset::Custom
+            }
+        }
+    }
+}
+
 impl Into<S_ActionGroup> for (&i32, &ActionGroup) {
     fn into(self) -> S_ActionGroup {
         let (id, group) = self;
         S_ActionGroup {
             actions: group
-                .actions()
+                .patterns()
                 .iter()
                 .map(|x| x.into())
                 .collect::<Vec<S_Action>>()

@@ -4,7 +4,7 @@ pub mod report;
 use std::{collections::HashMap, fs, ops::Deref, path::PathBuf, sync::Arc};
 
 use error::SendableErr;
-use patterns::{PatternParseError, RenamePattern};
+pub use patterns::{PatternParseError, RenamePattern};
 use rand::seq::IndexedRandom;
 use rayon::iter::{IntoParallelIterator, IntoParallelRefIterator, ParallelIterator};
 use report::Report;
@@ -78,7 +78,7 @@ impl ActionGroup {
             .flatten()
             .collect()
     }
-    pub fn execute(&self) -> Arc<[Result<Report, SendableErr>]> {
+    pub fn execute(&self) -> Vec<Result<Report, SendableErr>> {
         self.generate_actions()
             .into_par_iter()
             .map(|res| match res {

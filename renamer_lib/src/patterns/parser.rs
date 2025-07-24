@@ -13,43 +13,43 @@ use nom::{
 use regex::Regex;
 use thiserror::Error;
 
-type PatternParseResult<'a, I, O> = Result<(I, O), nom::Err<PatternParseError<'a>>>;
+type PatternParseResult<'a, I, O> = Result<(I, O), nom::Err<PatternParseError>>;
 
 #[derive(Debug, Error)]
-pub enum PatternParseError<'a> {
+pub enum PatternParseError {
     #[error("Parse Error!: {0}")]
-    NomError(nom::error::Error<&'a str>),
+    NomError(nom::error::Error<String>),
     #[error("Regex Compile Error!: {0}")]
     RegexError(regex::Error),
     #[error("Unrecognized Insert!: {0}")]
-    NonexistentInsert(&'a str),
+    NonexistentInsert(String),
     #[error("Unrecognized Capture Group! {0}")]
     NonexistentCapGroup(usize),
     #[error("{0}")]
     Other(Box<dyn Error>),
 }
 
-impl<'a> From<Box<dyn Error>> for PatternParseError<'a> {
+impl From<Box<dyn Error>> for PatternParseError {
     fn from(v: Box<dyn Error>) -> Self {
         Self::Other(v)
     }
 }
 
-impl<'a> From<nom::error::Error<&'a str>> for PatternParseError<'a> {
-    fn from(v: nom::error::Error<&'a str>) -> Self {
+impl From<nom::error::Error<String>> for PatternParseError {
+    fn from(v: nom::error::Error<String>) -> Self {
         Self::NomError(v)
     }
 }
 
-impl<'a> From<regex::Error> for PatternParseError<'a> {
+impl From<regex::Error> for PatternParseError {
     fn from(v: regex::Error) -> Self {
         Self::RegexError(v)
     }
 }
 
-impl<'a> ParseError<&'a str> for PatternParseError<'a> {
+impl<'a> ParseError<&'a str> for PatternParseError {
     fn from_error_kind(input: &'a str, kind: nom::error::ErrorKind) -> Self {
-        Self::NomError(nom::error::Error::new(input, kind))
+        Self::NomError(nom::error::Error::new(input.to_owned(), kind))
     }
 
     fn append(input: &str, kind: nom::error::ErrorKind, other: Self) -> Self {
@@ -60,7 +60,7 @@ impl<'a> ParseError<&'a str> for PatternParseError<'a> {
 use super::{PatternElem, PatternFunction, PatternInsert, RenamePattern};
 
 impl<'a> TryFrom<&'a str> for super::RenamePattern {
-    type Error = nom::Err<PatternParseError<'a>>;
+    type Error = nom::Err<PatternParseError>;
     fn try_from(value: &'a str) -> Result<Self, Self::Error> {
         let pattern = parse_pattern.parse(value).map(|x| x.1)?;
         println!("{pattern:?}");
@@ -92,7 +92,7 @@ fn parse_pattern(inp: &str) -> PatternParseResult<&str, super::RenamePattern> {
     //     Err(e) => (HashMap::new(), parse_pattern_elems.parse(inp)?.1),
     // };
     //
-    log::trace!("orig input: {inp}");
+    let orig_inp = inp.to_owned();
     let (inp, capture_groups) = opt(parse_capture_groups).parse(inp)?;
     // let (inp, capture_groups) = match cap_group_res {
     //     Ok((inp, caps)) => (inp, caps),
@@ -117,6 +117,8 @@ fn parse_pattern(inp: &str) -> PatternParseResult<&str, super::RenamePattern> {
     Ok((inp, RenamePattern {
         capture_groups,
         elements,
+        preset_info: None,
+        input: Some(orig_inp),
     }))
 }
 
@@ -151,7 +153,7 @@ fn parse_cap_group_regex(inp: &str) -> PatternParseResult<&str, Regex> {
     ))
 }
 
-fn compile_regex(inp: String) -> Result<Regex, PatternParseError<'static>> {
+fn compile_regex(inp: String) -> Result<Regex, PatternParseError> {
     let parsed_regex = Regex::new(&inp).map_err(|x| PatternParseError::from(x))?;
     Ok(parsed_regex)
 }
@@ -188,7 +190,7 @@ fn parse_insert(inp: &str) -> PatternParseResult<&str, PatternElem> {
         Ok(i) => i,
         Err(_) => {
             return Err(nom::Err::Failure(PatternParseError::NonexistentInsert(
-                orig_inp,
+                orig_inp.to_owned(),
             )));
         }
     };
@@ -239,6 +241,8 @@ mod test {
                 PatternElem::Literal(".".to_owned()),
                 PatternElem::Insert(PatternInsert::CaptureGroup(2)),
             ],
+            preset_info: None,
+            input: Some(input.to_owned()),
         };
         let res = super::parse_pattern(input).unwrap().1;
         if res != expected {
@@ -255,6 +259,8 @@ mod test {
                 PatternElem::Literal("hello".to_owned()),
                 PatternElem::Insert(PatternInsert::Random),
             ],
+            preset_info: None,
+            input: Some(input.to_owned()),
         };
         let res = super::parse_pattern(input).unwrap();
         assert!(res.1 == expected)
@@ -265,6 +271,8 @@ mod test {
         let expected = RenamePattern {
             capture_groups: HashMap::default(),
             elements: vec![PatternElem::Literal("hello".to_owned())],
+            preset_info: None,
+            input: Some(input.to_owned()),
         };
         let res = super::parse_pattern(input).unwrap();
         assert!(res.1 == expected)

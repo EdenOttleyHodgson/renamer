@@ -3,7 +3,7 @@ use std::{
     thread::{self, JoinHandle},
 };
 
-use crate::{slint_generatedRenamerWindow::RenamerWindow, state::RenamerState};
+use crate::{SendableErr, slint_generatedRenamerWindow::RenamerWindow, state::RenamerState};
 use log::trace;
 use renamer_lib::{ActionGroup, error::ActionError, report::Report};
 
@@ -14,7 +14,7 @@ pub enum ToLibMessage {
 #[derive(Debug)]
 pub enum FromLibMessage {
     SuccessfulActions(Vec<Report>),
-    UnsuccessfulActions(Vec<ActionError>),
+    UnsuccessfulActions(Vec<SendableErr>),
 }
 
 impl FromLibMessage {}
@@ -52,11 +52,8 @@ impl LibWrapper {
     }
 
     fn handle_execute_actions(&mut self, act_groups: Vec<ActionGroup>) {
-        let results: Vec<_> = act_groups
-            .into_iter()
-            .map(|x| x.run(THREADS))
-            .flatten()
-            .collect();
+        let results = act_groups.into_iter().map(|x| x.execute()).flatten();
+
         let (successes, errors) =
             results
                 .into_iter()
