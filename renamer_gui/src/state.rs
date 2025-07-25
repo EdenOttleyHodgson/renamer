@@ -12,9 +12,13 @@ use std::{
 
 use crate::lib_thread::{self, FromLibMessage, ToLibMessage, ToLibSender};
 use crate::slint_generatedRenamerWindow::{
-    RenamerWindow, S_Action, S_ActionGroup, S_File, S_Preset,
+    RenamerWindow, S_Action, S_ActionGroup, S_ActionOptions, S_File, S_Preset,
 };
-use renamer_lib::{ActionGroup, patterns::RenamePattern, report::Report};
+use renamer_lib::{
+    ActionGroup,
+    patterns::{ActionOptions, RenamePattern},
+    report::Report,
+};
 
 // slint::include_modules!();
 
@@ -185,10 +189,26 @@ impl TryInto<RenamePattern> for S_Action {
 
     fn try_into(self) -> Result<RenamePattern, Self::Error> {
         match self.preset {
-            S_Preset::Randomize => Ok(RenamePattern::randomize()),
-            S_Preset::Custom => {
-                RenamePattern::try_from(self.pattern.as_str()).map_err(|x| x.into())
-            }
+            S_Preset::Randomize => Ok(RenamePattern::randomize(self.options.into())),
+            S_Preset::Custom => RenamePattern::parse(self.pattern.as_str(), self.options.into())
+                .map_err(|x| x.into()),
+        }
+    }
+}
+
+impl Into<ActionOptions> for S_ActionOptions {
+    fn into(self) -> ActionOptions {
+        ActionOptions {
+            overwrite: self.overwrite,
+            preserve_file_extension: self.preserve_file_extension,
+        }
+    }
+}
+impl Into<S_ActionOptions> for ActionOptions {
+    fn into(self) -> S_ActionOptions {
+        S_ActionOptions {
+            overwrite: self.overwrite,
+            preserve_file_extension: self.preserve_file_extension,
         }
     }
 }
@@ -199,6 +219,7 @@ impl Into<S_Action> for (&i32, &RenamePattern) {
             pattern: self.1.input().cloned().unwrap_or("".to_owned()).into(),
             preset: self.1.preset_info().unwrap_or("Custom").into(),
             id: *self.0,
+            options: self.1.options().into(),
         }
     }
 }

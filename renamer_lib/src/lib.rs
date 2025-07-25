@@ -13,7 +13,7 @@ pub struct ActionGroup {
     id: i32,
     files: HashMap<i32, PathBuf>,
     next_file_id: i32,
-    patterns: HashMap<i32, RenamePattern>,
+    patterns: HashMap<i32, (RenamePattern)>,
     next_action_id: i32,
 }
 
@@ -58,14 +58,6 @@ impl ActionGroup {
     }
 
     fn generate_actions(&self) -> Vec<Result<Action, SendableErr>> {
-        // for pattern in self.patterns.values() {
-        //     for file in self.files.values() {
-        //         match Action::new(file.clone(), pattern) {
-        //             Ok(act) => actions.push(act),
-        //             Err(e) => errors.push(e),
-        //         }
-        //     }
-        // }
         self.patterns
             .par_iter()
             .map(|(_, pat)| {
@@ -91,24 +83,36 @@ impl ActionGroup {
 struct Action {
     old: PathBuf,
     new: PathBuf,
+    overwrite: bool,
 }
 impl Action {
     fn new(old: PathBuf, pattern: &RenamePattern) -> Result<Action, SendableErr> {
         let new = pattern.apply_to_file_name(&old)?;
-        Ok(Self { old, new })
+        Ok(Self {
+            old,
+            new,
+            overwrite: pattern.options().overwrite,
+        })
     }
     fn execute(&self) -> Result<Report, SendableErr> {
         let mut new = self.new.clone();
         let mut count = 0;
-        while fs::exists(&new)? {
-            count += 1;
-            new = append_to_path(new, &count.to_string());
+        let mut overwrote = false;
+        if self.overwrite {
+            while fs::exists(&new)? {
+                count += 1;
+                new = append_to_path(new, &count.to_string());
+            }
+        } else {
+            if fs::exists(&new)? {
+                overwrote = true;
+            }
         }
         fs::rename(&self.old, &new)?;
         Ok(Report::Renamed {
             from: self.old.clone(),
             to: new.clone(),
-            overwrote: false,
+            overwrote,
         })
     }
 }

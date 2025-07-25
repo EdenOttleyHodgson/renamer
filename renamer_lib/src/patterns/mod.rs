@@ -13,14 +13,16 @@ pub struct RenamePattern {
     elements: Vec<PatternElem>,
     preset_info: Option<&'static str>,
     input: Option<String>,
+    options: ActionOptions,
 }
 impl RenamePattern {
-    pub fn randomize() -> Self {
+    pub fn randomize(options: ActionOptions) -> Self {
         Self {
             capture_groups: HashMap::default(),
             elements: vec![PatternElem::Insert(PatternInsert::Random)],
             preset_info: Some("Randomize"),
             input: None,
+            options,
         }
     }
     pub fn apply_to_file_name(&self, fpath: &PathBuf) -> Result<PathBuf, SendableErr> {
@@ -57,6 +59,11 @@ impl RenamePattern {
         let mut new_path = fpath.clone();
         new_path.pop();
         new_path.push(out_name);
+        if self.options.preserve_file_extension {
+            if let Some(ext) = fpath.extension() {
+                new_path.set_extension(ext);
+            }
+        }
         Ok(new_path)
     }
 
@@ -66,6 +73,10 @@ impl RenamePattern {
 
     pub fn input(&self) -> Option<&String> {
         self.input.as_ref()
+    }
+
+    pub fn options(&self) -> ActionOptions {
+        self.options
     }
 }
 
@@ -123,9 +134,25 @@ impl<'a> TryFrom<&'a str> for PatternInsert {
     }
 }
 
+#[derive(Clone, Copy, Debug, Default)]
+pub struct ActionOptions {
+    pub preserve_file_extension: bool,
+    pub overwrite: bool,
+}
+
+impl ActionOptions {
+    pub fn new(preserve_file_extension: bool, overwrite: bool) -> Self {
+        Self {
+            preserve_file_extension,
+            overwrite,
+        }
+    }
+}
 #[cfg(test)]
 mod test {
     use std::{fs, path::PathBuf};
+
+    use crate::patterns::ActionOptions;
 
     use super::RenamePattern;
 
@@ -140,7 +167,7 @@ mod test {
             ("Plog".into(), "#.txt".into()),
             ("Grog".into(), "#.jpeg".into()),
         ];
-        let pattern = RenamePattern::try_from(input_pattern).unwrap();
+        let pattern = RenamePattern::parse(input_pattern, ActionOptions::default()).unwrap();
         let result: Vec<(String, String, String)> = input_files
             .iter()
             .map(|path| pattern.apply_to_file_name(path).unwrap())

@@ -1,6 +1,6 @@
 import {S_ActionGroup, S_Action} from "./structs.slint";
 import {ActionGroupComponent} from "./action-group.slint";
-import {Button, ScrollView, ListView} from "std-widgets.slint";
+import {Button, ScrollView, ListView, AboutSlint} from "std-widgets.slint";
 import {ActionMenu} from "./action-menu.slint";
 import {ResultsWindow} from "./results-window.slint";
 enum StateFlag {
@@ -50,6 +50,14 @@ export component RenamerWindow inherits Window{
     }
   */
 
+  AboutSlint {
+
+    width: 0.1 * root.width;
+    height: 0.1* root.height;
+
+    x: 0;
+    y: root.height - 0.1 * root.height; 
+  }
 
   Text {
     font-size: 20pt;

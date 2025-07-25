@@ -56,9 +56,9 @@ impl<'a> ParseError<&'a str> for PatternParseError {
     }
 }
 
-use super::{PatternElem, PatternInsert, RenamePattern};
+use super::{ActionOptions, PatternElem, PatternInsert, RenamePattern};
 
-impl<'a> TryFrom<&'a str> for super::RenamePattern {
+impl<'a> TryFrom<&'a str> for RenamePatternIntermediate {
     type Error = nom::Err<PatternParseError>;
     fn try_from(value: &'a str) -> Result<Self, Self::Error> {
         let pattern = parse_pattern.parse(value).map(|x| x.1)?;
@@ -76,18 +76,34 @@ impl<'a> TryFrom<&'a str> for super::RenamePattern {
     }
 }
 
-fn parse_pattern(inp: &str) -> PatternParseResult<&str, super::RenamePattern> {
-    let orig_inp = inp.to_owned();
+impl RenamePattern {
+    pub fn parse(inp: &str, options: ActionOptions) -> Result<Self, Box<dyn Error>> {
+        let intermediate = RenamePatternIntermediate::try_from(inp)?;
+        Ok(Self {
+            capture_groups: intermediate.capture_groups,
+            elements: intermediate.elements,
+            preset_info: None,
+            input: Some(inp.to_owned()),
+            options,
+        })
+    }
+}
+
+#[derive(Debug)]
+struct RenamePatternIntermediate {
+    capture_groups: HashMap<usize, Regex>,
+    elements: Vec<PatternElem>,
+}
+
+fn parse_pattern(inp: &str) -> PatternParseResult<&str, RenamePatternIntermediate> {
     let (inp, capture_groups) = opt(parse_capture_groups).parse(inp)?;
     let capture_groups = capture_groups.unwrap_or_default();
     let (inp, elements) = parse_pattern_elems
         .parse_complete(inp)
         .inspect_err(|e| println!("elems err {e}"))?;
-    Ok((inp, RenamePattern {
+    Ok((inp, RenamePatternIntermediate {
         capture_groups,
         elements,
-        preset_info: None,
-        input: Some(orig_inp),
     }))
 }
 
@@ -184,7 +200,7 @@ mod test {
 
     use regex::Regex;
 
-    use crate::patterns::{PatternElem, PatternInsert, RenamePattern};
+    use crate::patterns::{ActionOptions, PatternElem, PatternInsert, RenamePattern};
 
     #[test]
     fn basic_test() {
@@ -204,8 +220,9 @@ mod test {
             ],
             preset_info: None,
             input: Some(input.to_owned()),
+            options: ActionOptions::default(),
         };
-        let res = super::parse_pattern(input).unwrap().1;
+        let res = RenamePattern::parse(input, ActionOptions::default()).unwrap();
         if res != expected {
             panic!("res: {res:?} != expected: {expected:?}")
         }
@@ -222,9 +239,10 @@ mod test {
             ],
             preset_info: None,
             input: Some(input.to_owned()),
+            options: ActionOptions::default(),
         };
-        let res = super::parse_pattern(input).unwrap();
-        assert!(res.1 == expected)
+        let res = RenamePattern::parse(input, ActionOptions::default()).unwrap();
+        assert!(res == expected)
     }
     #[test]
     fn parse_literal() {
@@ -234,8 +252,9 @@ mod test {
             elements: vec![PatternElem::Literal("hello".to_owned())],
             preset_info: None,
             input: Some(input.to_owned()),
+            options: ActionOptions::default(),
         };
-        let res = super::parse_pattern(input).unwrap();
-        assert!(res.1 == expected)
+        let res = RenamePattern::parse(input, ActionOptions::default()).unwrap();
+        assert!(res == expected)
     }
 }

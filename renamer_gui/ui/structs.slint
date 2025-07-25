@@ -2,11 +2,17 @@ export enum S_Preset {
   randomize,
   custom
 }
+export struct S_ActionOptions {
+  overwrite: bool,
+  preserve-file-extension: bool,
+}
 export struct S_Action {
   id: int,
   preset: S_Preset,
-  pattern: string
+  pattern: string,
+  options: S_ActionOptions
 }
+
 export struct S_File {
   id: int,
   path: string
